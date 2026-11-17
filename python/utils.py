@@ -37,6 +37,16 @@ def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray)
     return image_out
 
 
+def macc(A: np.ndarray, B: np.ndarray, C: np.ndarray):
+    """_summary_
+    S = A . B + C
+    $$S_{i,j} = \sum_{k} (A_{i,k}\times B_{k,j}) +bias_{i,j}$$
+    
+    """
+    
+    return np.matmul(A,B) + C
+    
+
 def max_pool(image, size : int, stride: int):
     """
     image (H,W, c)
