@@ -1,0 +1,4 @@
+# Référence algorithmique du CNN CIFAR-10 (étape Python)
+numpy>=1.26        # lecture des batches binaires CIFAR-10, calcul des couches
+matplotlib>=3.8    # affichage des images et des cartes de caractéristiques
+pillow>=10.0       # export d'images (PGM/PPM/PNG) pour les tests C++/HLS

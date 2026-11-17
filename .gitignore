@@ -3,15 +3,16 @@
 # ==========================================================
 
 # ---------- Ressources du cours (volumineuses / non redistribuables) ----------
-HLS.zip
-HLS/*.pdf
-HLS/bash_*
+doc/HLS.zip
+doc/hls/
 # Décommenter pour ne pas versionner les sujets PDF :
-# SEI_CNN.pdf
-# BoiteAOutilsHLSImage.pdf
+# doc/SEI_CNN.pdf
+# doc/BoiteAOutilsHLSImage.pdf
 
 # ---------- Données CIFAR-10 et poids générés ----------
-data/
+# data/ : tout est ignoré sauf les coefficients du CNN (data/coef/)
+data/*
+!data/coef/
 datasets/
 cifar-10-batches-*/
 cifar-10-python.tar.gz
@@ -122,6 +123,7 @@ results/
 *.out
 
 # ---------- Éditeurs / OS ----------
+.claude/
 .vscode/
 .idea/
 *.swp
