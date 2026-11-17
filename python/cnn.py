@@ -1,5 +1,8 @@
 from utils import *
 
+import matplotlib.pyplot as plt
+
+
 def cnn(image, tensors):
     
     """ 
@@ -30,12 +33,22 @@ def cnn(image, tensors):
      | image9 10
     
     """
+    
+    
+
     image1 = image
     H, W, L = image1.shape
     assert(24 == W == H and L == 3)
+
+    #plt.imshow(image1[:,:,0])
+    #plt.show()
     
-    image2 = relu(convolution_feature(
-        image1, tensors["conv1/weights"],  tensors["conv1/biases"]))
+    image2_temp = convolution_feature(
+        image1, tensors["conv1/weights"],  tensors["conv1/biases"])
+    image2 = relu(image2_temp)
+
+    #plt.imshow(image2_temp[:,:,0])
+    #plt.show()
     
     image3 = max_pool(image2, 3, 2)
     

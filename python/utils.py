@@ -23,7 +23,7 @@ def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray)
     M,N, L2, C = kernel.shape
     assert(M == N)
     assert (L == L2)
-    assert(bias.shape == C, f"{bias.shape}")
+    assert(bias.shape == (C,), f"{bias.shape}")
     image_out = np.zeros((H,W,C))
     for i in range(W): 
         for j in range(H):
@@ -31,7 +31,7 @@ def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray)
                 for l in range(L):
                     for m in range(-(M//2),M//2+1):
                         for n in range(-(N//2),N//2+1):
-                            image_out[i, j, c] += get_valid_pixel(image, i + m, j + n, l) * kernel[m,n,l,c]
+                            image_out[i, j, c] += get_valid_pixel(image, i + m, j + n, l) * kernel[m+M//2,n+N//2,l,c]
                 image_out[i, j, c] += bias[c]
 
     return image_out
@@ -68,8 +68,8 @@ def max_pool(image, size : int, stride: int):
 
                 max_value = -float('inf')
 
-                for m in range( -(size//stride), size//stride + 1 ):
-                    for n in range( -(size//stride), size//stride + 1 ):
+                for m in range( -(size//2), size//2 + 1 ):
+                    for n in range( -(size//2), size//2 + 1 ):
                         current_value = get_valid_pixel(image, i*stride+m, j*stride+n, c)
                         if current_value > max_value:
                             max_value = current_value
@@ -92,6 +92,6 @@ def relu(image):
     for i in range(W): 
         for j in range(H):
             for c in range(C):
-                image_out[i, j, c] =  max(image_out[i, j, c],0)
+                image_out[i, j, c] =  max(image[i, j, c],0)
 
     return image_out
