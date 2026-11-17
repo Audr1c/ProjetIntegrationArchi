@@ -1,11 +1,12 @@
-from read_image import *
-from extractCoeff import *
-from utils import *
-from cnn import *
-from tqdm import *
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
-import os
+from tqdm import tqdm
+
+from read_image import load_batch, load_label_names, DATA_DIR
+from extractCoeff import parse_tensors, COEF_DIR
+from cnn import cnn
 
 
 def main() :

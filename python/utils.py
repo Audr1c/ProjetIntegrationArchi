@@ -1,97 +1,101 @@
 import numpy as np
 
 
-def get_valid_pixel(image, x, y, chan):
+# Position de la fenêtre du max-pool
+POOL_TF_SAME = "tf_same"     # fenêtre [i*stride, i*stride + size - 1] (TensorFlow padding='SAME')
+POOL_CENTERED = "centered"   # fenêtre centrée sur i*stride
+
+
+def get_valid_pixel(image, row, col, chan):
+    """Pixel image[row, col, chan], ou 0 s'il est hors de l'image (padding)."""
     H, W, L = image.shape
-    if 0 <= x < W and 0 <= y < H and 0 <= chan < L :
-        return image[x,y,chan]
+    if 0 <= row < H and 0 <= col < W and 0 <= chan < L:
+        return image[row, col, chan]
     return 0
 
+
 def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray):
-    """_summary_
-    kernel : M:3/5,N3/5,l,c
-    bias : C
-    image : (H,W,l)
-    output_image : (H,W,c)
-    (i,j) \in (H,W) : posisition image de sortie
-    L : nb composatne entrée
-    C : nb de composante sortie
+    r"""
+    kernel : (M, N, L, C)  M = N = 3 ou 5
+    bias   : (C,)
+    image  : (H, W, L)
+    sortie : (H, W, C)
+    (i, j) \in (H, W) : position dans l'image de sortie
+    L : nb de composantes en entrée
+    C : nb de composantes en sortie
     $$S_{i,j,c} = \sum_{m,n\in [-1,1], l\in [1,L]} (I_{i+m,j+n, l}\times K_{m,n,l,c}) +bias_c$$
-    
     """
     H, W, L = image.shape
-    M,N, L2, C = kernel.shape
-    assert(M == N)
-    assert (L == L2)
-    assert(bias.shape == (C,), f"{bias.shape}")
-    image_out = np.zeros((H,W,C))
-    for i in range(W): 
-        for j in range(H):
+    M, N, L2, C = kernel.shape
+    assert M == N
+    assert L == L2
+    assert bias.shape == (C,), f"{bias.shape}"
+    image_out = np.zeros((H, W, C))
+    for i in range(H):
+        for j in range(W):
             for c in range(C):
                 for l in range(L):
-                    for m in range(-(M//2),M//2+1):
-                        for n in range(-(N//2),N//2+1):
-                            image_out[i, j, c] += get_valid_pixel(image, i + m, j + n, l) * kernel[m+M//2,n+N//2,l,c]
+                    for m in range(-(M//2), M//2 + 1):
+                        for n in range(-(N//2), N//2 + 1):
+                            image_out[i, j, c] += get_valid_pixel(image, i + m, j + n, l) * kernel[m + M//2, n + N//2, l, c]
                 image_out[i, j, c] += bias[c]
 
     return image_out
 
 
 def macc(A: np.ndarray, B: np.ndarray, C: np.ndarray):
-    """_summary_
+    r"""
     S = A . B + C
-    $$S_{i,j} = \sum_{k} (A_{i,k}\times B_{k,j}) +bias_{i,j}$$
-    
+    $$S_{j} = \sum_{k} (A_{k}\times B_{k,j}) + C_{j}$$
     """
-    
-    return np.matmul(A,B) + C
-    
+    return np.matmul(A, B) + C
 
-def max_pool(image, size : int, stride: int):
+
+def max_pool(image, size: int, stride: int, mode: str = POOL_TF_SAME):
     """
-    image (H,W, c)
-    size = AxA, the window
-    stride =  BxB, the step 
+    image : (H, W, c)
+    size  : fenêtre size x size
+    stride: pas stride x stride
+    mode  : POOL_TF_SAME  -> lignes [i*stride, i*stride + size - 1]  (réseau entraîné ainsi)
+            POOL_CENTERED -> lignes [i*stride - size//2, i*stride + size//2]
 
-    
-    image_out : (H/B, W/B, c)
+    image_out : (H/stride, W/stride, c)
     """
-
     H_in, W_in, channels = image.shape
-    H_out, W_out = H_in//stride, W_in//stride
+    H_out, W_out = H_in // stride, W_in // stride
     image_out = np.zeros((H_out, W_out, channels))
 
-    for c in range(channels):
+    if mode == POOL_TF_SAME:
+        offsets = range(size)
+    elif mode == POOL_CENTERED:
+        offsets = range(-(size//2), size//2 + 1)
+    else:
+        raise ValueError(f"mode de max_pool inconnu : {mode}")
 
+    for c in range(channels):
         for i in range(H_out):
             for j in range(W_out):
-
                 max_value = -float('inf')
-
-                for m in range( -(size//2), size//2 + 1 ):
-                    for n in range( -(size//2), size//2 + 1 ):
-                        current_value = get_valid_pixel(image, i*stride+m, j*stride+n, c)
+                for m in offsets:
+                    for n in offsets:
+                        current_value = get_valid_pixel(image, i*stride + m, j*stride + n, c)
                         if current_value > max_value:
                             max_value = current_value
-                
-                image_out[i,j,c] = max_value
-
+                image_out[i, j, c] = max_value
 
     return image_out
 
 
-    
-def relu(image): 
+def relu(image):
     """
-    image (H,W, c)
-    image_out (H,W, c)    
-    
+    image     : (H, W, c)
+    image_out : (H, W, c)
     """
     H, W, C = image.shape
-    image_out = np.zeros((H,W,C))
-    for i in range(W): 
-        for j in range(H):
+    image_out = np.zeros((H, W, C))
+    for i in range(H):
+        for j in range(W):
             for c in range(C):
-                image_out[i, j, c] =  max(image[i, j, c],0)
+                image_out[i, j, c] = max(image[i, j, c], 0)
 
     return image_out
