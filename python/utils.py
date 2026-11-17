@@ -2,7 +2,7 @@ import numpy as np
 
 
 def get_valid_pixel(image, x, y, chan):
-    H, W, L = image.shape()
+    H, W, L = image.shape
     if 0 <= x < W and 0 <= y < H and 0 <= chan < L :
         return image[x,y,chan]
     return 0
@@ -19,12 +19,12 @@ def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray)
     $$S_{i,j,c} = \sum_{m,n\in [-1,1], l\in [1,L]} (I_{i+m,j+n, l}\times K_{m,n,l,c}) +bias_c$$
     
     """
-    H, W, L = image.shape()
-    M,N, L2, C = kernel.shape()
+    H, W, L = image.shape
+    M,N, L2, C = kernel.shape
     assert(M == N)
     assert (L == L2)
-    assert(bias.shape == (C))
-    image_out = np.zeros(H,W,C)
+    assert(bias.shape == C, f"{bias.shape}")
+    image_out = np.zeros((H,W,C))
     for i in range(W): 
         for j in range(H):
             for c in range(C):
@@ -87,8 +87,8 @@ def relu(image):
     image_out (H,W, c)    
     
     """
-    H, W, C = image.shape()
-    image_out = np.zeros(H,W,C)
+    H, W, C = image.shape
+    image_out = np.zeros((H,W,C))
     for i in range(W): 
         for j in range(H):
             for c in range(C):

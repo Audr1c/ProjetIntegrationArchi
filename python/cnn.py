@@ -1,7 +1,9 @@
 from utils import *
 
-def cnn(image, k_size, tensors):
+def cnn(image, tensors):
+    
     """ 
+    k_size = 3 or 5 
      | image1 24 x 24 x 3 
     convolution "conv1/weights" (k_size, k_size, 3, 64)
        + add biases "conv1/biases" : 64
@@ -23,13 +25,13 @@ def cnn(image, k_size, tensors):
      | image7 3x3x20
     Reshape : 3x3x20 -> 180
      | image8 180
-    Fully connected perceptron "local1/weights" 180x10
-        + add biases "local1/biases" :10
+    Fully connected perceptron "local3/weights" 180x10
+        + add biases "local3/biases" :10
      | image9 10
     
     """
     image1 = image
-    H, W, L = image1.shape()
+    H, W, L = image1.shape
     assert(24 == W == H and L == 3)
     
     image2 = relu(convolution_feature(
@@ -49,6 +51,6 @@ def cnn(image, k_size, tensors):
     
     image8 = image7.reshape(180)
     
-    image9 = macc(image8, tensors["local1/weights"],  tensors["local1/biases"])
+    image9 = macc(image8, tensors["local3/weights"],  tensors["local3/biases"])
 
     return image9
