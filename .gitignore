@@ -1,0 +1,130 @@
+# ==========================================================
+#  Projet CNN CIFAR-10 sur SoC — Python → virgule fixe → HLS → FPGA
+# ==========================================================
+
+# ---------- Ressources du cours (volumineuses / non redistribuables) ----------
+HLS.zip
+HLS/*.pdf
+HLS/bash_*
+# Décommenter pour ne pas versionner les sujets PDF :
+# SEI_CNN.pdf
+# BoiteAOutilsHLSImage.pdf
+
+# ---------- Données CIFAR-10 et poids générés ----------
+data/
+datasets/
+cifar-10-batches-*/
+cifar-10-python.tar.gz
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+# Garder les poids/headers exportés de référence : les ajouter avec git add -f
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+
+# ---------- C / C++ (modèle virgule fixe, testbench) ----------
+*.o
+*.a
+*.so
+*.out
+*.exe
+build/
+bin/
+obj/
+core
+core.*
+
+# ---------- Catapult HLS / SCVerify ----------
+Catapult/
+Catapult_*/
+*.ccs
+*.ccs.bak
+catapult.log
+catapult_*.log
+messages.txt
+design_checker_*
+scverify/
+*.ldb
+
+# ---------- Simulation HDL (ModelSim/Questa, GHDL) ----------
+work/
+transcript
+vsim.wlf
+*.wlf
+modelsim.ini
+*.vstf
+*.cf
+*.ghw
+*.vcd
+
+# ---------- Xilinx Vivado / Vitis ----------
+*.jou
+*.log
+*.str
+*.pb
+*.dcp
+*.bit
+*.bin
+*.mcs
+*.ltx
+*.hwdef
+*.xsa
+*.hdf
+.Xil/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.gen/
+.srcs/**/ip/*/
+NA/
+vivado_pid*.zip
+webtalk*
+usage_statistics_webtalk.*
+.hbs/
+*.sdk/
+_ide/
+RemoteSystemsTempFiles/
+.metadata/
+
+# ---------- Images de test générées ----------
+out/
+results/
+*_out.pgm
+*_out.ppm
+
+# ---------- Rapport LaTeX ----------
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.out
+
+# ---------- Éditeurs / OS ----------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

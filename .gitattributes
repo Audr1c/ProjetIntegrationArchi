@@ -1,0 +1,42 @@
+# Normalisation automatique des fins de ligne (LF dans le dépôt)
+* text=auto
+
+# Scripts exécutés sous Linux : toujours LF (sinon "bad interpreter: ^M")
+*.sh    text eol=lf
+*.tcl   text eol=lf
+*.py    text eol=lf
+Makefile text eol=lf
+*.mk    text eol=lf
+
+# Sources
+*.c     text diff=cpp
+*.h     text diff=cpp
+*.cpp   text diff=cpp
+*.hpp   text diff=cpp
+*.vhd   text
+*.vhdl  text
+*.v     text
+*.sv    text
+*.xdc   text
+*.tex   text diff=tex
+
+# Fichiers de poids / données exportés en texte : pas de diff ligne à ligne illisible
+*.dat   -diff
+*.mem   -diff
+*.coe   -diff
+
+# Binaires (aucune conversion, aucun diff)
+*.pdf   binary
+*.zip   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.bmp   binary
+*.pgm   binary
+*.ppm   binary
+*.bit   binary
+*.npy   binary
+*.npz   binary
+*.h5    binary
+*.pt    binary
+*.pth   binary
