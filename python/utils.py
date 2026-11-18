@@ -99,3 +99,11 @@ def relu(image):
                 image_out[i, j, c] = max(image[i, j, c], 0)
 
     return image_out
+
+
+def array_amplitude(array, edge_percentile=5):
+    '''
+    Use to estimate how to code the number of fixed point values
+    '''
+    return [array.min(), np.percentile(array, edge_percentile), np.percentile(array, 100-edge_percentile), array.max()]
+
