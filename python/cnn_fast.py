@@ -63,7 +63,7 @@ def max_pool_fast(x, size, stride, mode=POOL_TF_SAME):
     return out
 
 
-def cnn_fast(images, tensors, pool_mode=POOL_TF_SAME):
+def cnn_fast(images, tensors, pool_mode=POOL_TF_SAME, max_pool_ksize=3):
     """CNN vectorisé.
 
     images : (24, 24, 3) pour une image, ou (N, 24, 24, 3) pour un batch
@@ -77,7 +77,7 @@ def cnn_fast(images, tensors, pool_mode=POOL_TF_SAME):
     for k in (1, 2, 3):
         x = convolution_fast(x, tensors[f"conv{k}/weights"], tensors[f"conv{k}/biases"])
         x = relu_fast(x)
-        x = max_pool_fast(x, 3, 2, pool_mode)
+        x = max_pool_fast(x, max_pool_ksize, 2, pool_mode)
 
     x = x.reshape(len(x), -1)                                   # (N, 180), ordre HWC
     out = x @ tensors["local3/weights"] + tensors["local3/biases"]

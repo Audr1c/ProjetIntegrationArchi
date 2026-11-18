@@ -23,7 +23,7 @@ SRC_DIR := python
 SRCS    := $(wildcard $(SRC_DIR)/*.py)
 
 # --- Arborescence ---
-DIRS      := python cpp hls hls/include fpga data data/coef doc rapport build
+DIRS      := python cpp hls hls/include fpga data data/coef doc rapport build Results
 # Seuls ces éléments sont autorisés à la racine du dépôt
 ROOT_OK   := $(DIRS) Makefile README.md requirements.txt \
              .gitignore .gitattributes .git .venv .claude

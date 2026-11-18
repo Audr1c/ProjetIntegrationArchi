@@ -1,7 +1,7 @@
 from utils import convolution_feature, relu, max_pool, macc, POOL_TF_SAME
 
 
-def cnn(image, tensors, pool_mode=POOL_TF_SAME):
+def cnn(image, tensors, pool_mode=POOL_TF_SAME, max_pool_ksize=3):
     """
     k_size = 3 or 5
      | image1 24 x 24 x 3
@@ -38,17 +38,17 @@ def cnn(image, tensors, pool_mode=POOL_TF_SAME):
     image2 = relu(convolution_feature(
         image1, tensors["conv1/weights"], tensors["conv1/biases"]))
 
-    image3 = max_pool(image2, 3, 2, pool_mode)
+    image3 = max_pool(image2, max_pool_ksize, 2, pool_mode)
 
     image4 = relu(convolution_feature(
         image3, tensors["conv2/weights"], tensors["conv2/biases"]))
 
-    image5 = max_pool(image4, 3, 2, pool_mode)
+    image5 = max_pool(image4, max_pool_ksize, 2, pool_mode)
 
     image6 = relu(convolution_feature(
         image5, tensors["conv3/weights"], tensors["conv3/biases"]))
 
-    image7 = max_pool(image6, 3, 2, pool_mode)
+    image7 = max_pool(image6, max_pool_ksize, 2, pool_mode)
 
     image8 = image7.reshape(180)
 
