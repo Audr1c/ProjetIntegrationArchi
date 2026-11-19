@@ -11,7 +11,7 @@ import numpy as np
 from utils import POOL_TF_SAME, POOL_CENTERED
 
 
-def convolution_fast(x, kernel, bias):
+def convolution_fast(x, kernel, bias, stats=None, name="conv"):
     """Convolution 'SAME' avec padding à zéro.
 
     x      : (N, H, W, L)
@@ -29,7 +29,12 @@ def convolution_fast(x, kernel, bias):
     for m in range(M):
         for n in range(M):
             out += xp[:, m:m + H, n:n + W, :] @ kernel[m, n]
-    return out + bias
+    if stats is not None:
+        stats.record(f"{name}/acc", out)
+    out = out + bias
+    if stats is not None:
+        stats.record(f"{name}/acc+bias", out)
+    return out
 
 
 def relu_fast(x):
@@ -63,22 +68,33 @@ def max_pool_fast(x, size, stride, mode=POOL_TF_SAME):
     return out
 
 
-def cnn_fast(images, tensors, pool_mode=POOL_TF_SAME, max_pool_ksize=3):
+def cnn_fast(images, tensors, pool_mode=POOL_TF_SAME, max_pool_ksize=3, stats=None):
     """CNN vectorisé.
 
     images : (24, 24, 3) pour une image, ou (N, 24, 24, 3) pour un batch
     sortie : (10,) ou (N, 10) — scores avant softmax, argmax = classe prédite
+    stats  : amplitude.AmplitudeStats optionnel, mêmes noms d'étapes que cnn.py
     """
     single = images.ndim == 3
     x = images[None] if single else images
     x = x.astype(np.float32)
     assert x.shape[1:] == (24, 24, 3), f"{x.shape}"
+    if stats is not None:
+        stats.new_image(len(x))
+        stats.record("input", x)
 
     for k in (1, 2, 3):
-        x = convolution_fast(x, tensors[f"conv{k}/weights"], tensors[f"conv{k}/biases"])
+        x = convolution_fast(x, tensors[f"conv{k}/weights"], tensors[f"conv{k}/biases"],
+                             stats=stats, name=f"conv{k}")
         x = relu_fast(x)
         x = max_pool_fast(x, max_pool_ksize, 2, pool_mode)
+        if stats is not None:
+            stats.record(f"conv{k}/pool", x)
 
     x = x.reshape(len(x), -1)                                   # (N, 180), ordre HWC
-    out = x @ tensors["local3/weights"] + tensors["local3/biases"]
+    acc = x @ tensors["local3/weights"]
+    out = acc + tensors["local3/biases"]
+    if stats is not None:
+        stats.record("fc/acc", acc)
+        stats.record("fc/out", out)
     return out[0] if single else out

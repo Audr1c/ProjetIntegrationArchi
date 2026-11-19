@@ -14,7 +14,7 @@ def get_valid_pixel(image, row, col, chan):
     return 0
 
 
-def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray):
+def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray, stats=None, name="conv"):
     r"""
     kernel : (M, N, L, C)  M = N = 3 ou 5
     bias   : (C,)
@@ -38,17 +38,29 @@ def convolution_feature(image: np.ndarray, kernel: np.ndarray, bias: np.ndarray)
                     for m in range(-(M//2), M//2 + 1):
                         for n in range(-(N//2), N//2 + 1):
                             image_out[i, j, c] += get_valid_pixel(image, i + m, j + n, l) * kernel[m + M//2, n + N//2, l, c]
+                            
+    if stats is not None:
+        stats.record(f"{name}/acc", image_out)
+    for i in range(H):
+        for j in range(W):
+            for c in range(C):
                 image_out[i, j, c] += bias[c]
-
+    if stats is not None:
+        stats.record(f"{name}/acc+bias", image_out)
     return image_out
 
 
-def macc(A: np.ndarray, B: np.ndarray, C: np.ndarray):
+def macc(A: np.ndarray, B: np.ndarray, C: np.ndarray, stats=None, name="fc"):
     r"""
     S = A . B + C
     $$S_{j} = \sum_{k} (A_{k}\times B_{k,j}) + C_{j}$$
     """
-    return np.matmul(A, B) + C
+    acc = np.matmul(A, B)
+    result = acc + C
+    if stats is not None:
+        stats.record(f"{name}/acc", acc)
+        stats.record(f"{name}/out", result)
+    return result
 
 
 def max_pool(image, size: int, stride: int, mode: str = POOL_TF_SAME):
@@ -99,11 +111,4 @@ def relu(image):
                 image_out[i, j, c] = max(image[i, j, c], 0)
 
     return image_out
-
-
-def array_amplitude(array, edge_percentile=5):
-    '''
-    Use to estimate how to code the number of fixed point values
-    '''
-    return [array.min(), np.percentile(array, edge_percentile), np.percentile(array, 100-edge_percentile), array.max()]
 

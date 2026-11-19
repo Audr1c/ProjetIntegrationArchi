@@ -1,7 +1,7 @@
 from utils import convolution_feature, relu, max_pool, macc, POOL_TF_SAME
 
 
-def cnn(image, tensors, pool_mode=POOL_TF_SAME, max_pool_ksize=3):
+def cnn(image, tensors, pool_mode=POOL_TF_SAME, max_pool_ksize=3, stats=None):
     """
     k_size = 3 or 5
      | image1 24 x 24 x 3
@@ -30,28 +30,38 @@ def cnn(image, tensors, pool_mode=POOL_TF_SAME, max_pool_ksize=3):
      | image9 10
 
     pool_mode : POOL_TF_SAME (défaut) ou POOL_CENTERED, voir utils.max_pool
+    stats     : amplitude.AmplitudeStats optionnel, cumule la dynamique de chaque étape
     """
     image1 = image
     H, W, L = image1.shape
     assert 24 == W == H and L == 3
+    if stats is not None:
+        stats.new_image()
+        stats.record("input", image1)
 
     image2 = relu(convolution_feature(
-        image1, tensors["conv1/weights"], tensors["conv1/biases"]))
+        image1, tensors["conv1/weights"], tensors["conv1/biases"], stats=stats, name="conv1"))
 
     image3 = max_pool(image2, max_pool_ksize, 2, pool_mode)
+    if stats is not None:
+        stats.record("conv1/pool", image3)
 
     image4 = relu(convolution_feature(
-        image3, tensors["conv2/weights"], tensors["conv2/biases"]))
+        image3, tensors["conv2/weights"], tensors["conv2/biases"], stats=stats, name="conv2"))
 
     image5 = max_pool(image4, max_pool_ksize, 2, pool_mode)
+    if stats is not None:
+        stats.record("conv2/pool", image5)
 
     image6 = relu(convolution_feature(
-        image5, tensors["conv3/weights"], tensors["conv3/biases"]))
+        image5, tensors["conv3/weights"], tensors["conv3/biases"], stats=stats, name="conv3"))
 
     image7 = max_pool(image6, max_pool_ksize, 2, pool_mode)
+    if stats is not None:
+        stats.record("conv3/pool", image7)
 
     image8 = image7.reshape(180)
 
-    image9 = macc(image8, tensors["local3/weights"], tensors["local3/biases"])
+    image9 = macc(image8, tensors["local3/weights"], tensors["local3/biases"], stats=stats, name="fc")
 
     return image9
