@@ -1,3 +1,6 @@
+#ifndef UTILS_CPP
+#define UTILS_CPP
+
 #include "utils.hpp"
 
 
@@ -40,10 +43,10 @@ ac_fixed<W, I, S> get_valid_pixel(
 // ============================================================
 
 template <
+    int W_o, int I_o, bool S_o,  // Image output
     int W_i, int I_i, bool S_i,  // Image input
     int W_k, int I_k, bool S_k,  // Kernel
     int W_b, int I_b, bool S_b,  // Bias
-    int W_o, int I_o, bool S_o,  // Image output
     int G                        // Bits de garde de l'accumulateur
 >
 imageT<W_o, I_o, S_o> convolution_feature(
@@ -88,10 +91,10 @@ imageT<W_o, I_o, S_o> convolution_feature(
 // ============================================================
 
 template <
+    int W_o, int I_o, bool S_o,  // Sortie S
     int W_a, int I_a, bool S_a,  // Input A
     int W_m, int I_m, bool S_m,  // Matrix B
     int W_c, int I_c, bool S_c,  // Input C
-    int W_o, int I_o, bool S_o,  // Sortie S
     int G                        // Bits de garde de l'accumulateur
 >
 vector<ac_fixed<W_o, I_o, S_o>> m_acc(
@@ -126,8 +129,8 @@ vector<ac_fixed<W_o, I_o, S_o>> m_acc(
 // ============================================================
 
 template <
-    int W_i, int I_i, bool S_i,  // Image input
-    int W_o, int I_o, bool S_o   // Image output
+    int W_o, int I_o, bool S_o,  // Image output
+    int W_i, int I_i, bool S_i   // Image input
 >
 imageT<W_o, I_o, S_o> max_pool(
     const imageT<W_i, I_i, S_i>& img,
@@ -163,3 +166,4 @@ imageT<W_o, I_o, S_o> max_pool(
     return img_o;
 }
 
+#endif // UTILS_CPP

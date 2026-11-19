@@ -132,4 +132,7 @@ imageT<W_o, I_o, S_o> max_pool(
 
 
 
+// Templates : les définitions doivent être visibles là où on les instancie
+#include "utils.cpp"
+
 #endif //UTILS_HPP
