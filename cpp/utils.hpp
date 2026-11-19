@@ -114,8 +114,9 @@ vector<ac_fixed<W_o, I_o, S_o>> m_acc(
 // ============================================================
 
 template <
-    int W_i, int I_i, bool S_i,  // Image input
-    int W_o, int I_o, bool S_o   // Image output
+    int W_o, int I_o, bool S_o,   // Image output
+    int W_i, int I_i, bool S_i  // Image input
+    
 >
 imageT<W_o, I_o, S_o> max_pool(
     const imageT<W_i, I_i, S_i>& img,
