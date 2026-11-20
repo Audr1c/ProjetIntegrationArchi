@@ -130,3 +130,8 @@ results/
 *~
 .DS_Store
 Thumbs.db
+
+# ---------- Exploration des formats ----------
+# Données des runs versionnées (cache, historiques, synthèses, config.hpp : ~1 Mo compressé).
+# Graphes ignorés (~12 Mo) : regénérer avec `.venv/bin/python Exploration/explore.py plot --no-show`
+Exploration/runs/**/*.png

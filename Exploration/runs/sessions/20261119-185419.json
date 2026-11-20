@@ -1,0 +1,208 @@
+{
+ "id": "20261119-185419",
+ "created": "2026-11-19T18:54:19",
+ "params": {
+  "k": 5,
+  "images": 1000,
+  "batch": "data_batch_1.bin",
+  "threshold": 1.0,
+  "threshold_range": null,
+  "parallel_vars": 2,
+  "order": "random",
+  "passes": 4,
+  "start_F": 12,
+  "early_stop": true,
+  "z": 2.0,
+  "min_images": 20,
+  "reorder": true,
+  "easy_frac": 0.1,
+  "easy_every": 4,
+  "runs": 30
+ },
+ "code": "33375c5134",
+ "seed0": 4816,
+ "runs": [
+  {
+   "seed": 4816,
+   "threshold": 1.0,
+   "run_id": "20261119-185419_k5_t1_s4816",
+   "status": "termin\u00e9",
+   "variables": "128/128"
+  },
+  {
+   "seed": 4817,
+   "threshold": 1.0,
+   "run_id": "20261119-200742_k5_t1_s4817",
+   "status": "interrompu",
+   "variables": "0/128"
+  },
+  {
+   "seed": 4818,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4819,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4820,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4821,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4822,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4823,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4824,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4825,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4826,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4827,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4828,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4829,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4830,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4831,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4832,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4833,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4834,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4835,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4836,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4837,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4838,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4839,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4840,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4841,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4842,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4843,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4844,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 4845,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  }
+ ]
+}

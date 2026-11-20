@@ -20,7 +20,7 @@ vector<out_t> cnn(const imageT<IN_W, IN_I, true>& image1, const CnnCoeffs& coef)
 
     //=== 1ST CONV ===//                                  24x24x3 -> 24x24x64
     imageT<CONV1_W, CONV1_I, true> image2;
-    image2 = convolution_feature<CONV1_W, CONV1_I, true>(image1, coef.ker1, coef.bia1);
+    image2 = convolution_feature<CONV1_W, CONV1_I, true, ACC1_W, ACC1_I>(image1, coef.ker1, coef.bia1);
     relu(image2);
 
     //=== 1ST MAX POOL ===//                              -> 12x12x64
@@ -30,7 +30,7 @@ vector<out_t> cnn(const imageT<IN_W, IN_I, true>& image1, const CnnCoeffs& coef)
 
     //=== 2ND CONV ===//                                  -> 12x12x32
     imageT<CONV2_W, CONV2_I, true> image4;
-    image4 = convolution_feature<CONV2_W, CONV2_I, true>(image3, coef.ker2, coef.bia2);
+    image4 = convolution_feature<CONV2_W, CONV2_I, true, ACC2_W, ACC2_I>(image3, coef.ker2, coef.bia2);
     relu(image4);
 
     //=== 2ND MAX POOL ===//                              -> 6x6x32
@@ -40,7 +40,7 @@ vector<out_t> cnn(const imageT<IN_W, IN_I, true>& image1, const CnnCoeffs& coef)
 
     //=== 3RD CONV ===//                                  -> 6x6x20
     imageT<CONV3_W, CONV3_I, true> image6;
-    image6 = convolution_feature<CONV3_W, CONV3_I, true>(image5, coef.ker3, coef.bia3);
+    image6 = convolution_feature<CONV3_W, CONV3_I, true, ACC3_W, ACC3_I>(image5, coef.ker3, coef.bia3);
     relu(image6);
 
     //=== 3RD MAX POOL ===//                              -> 3x3x20
@@ -51,5 +51,5 @@ vector<out_t> cnn(const imageT<IN_W, IN_I, true>& image1, const CnnCoeffs& coef)
     //=== PERCEPTRON ===//                                180 -> 10
     vector<pool3_t> image8 = flatten_hwc(image7);
 
-    return m_acc<OUT_W, OUT_I, true>(image8, coef.fc_k, coef.fc_b);
+    return m_acc<OUT_W, OUT_I, true, ACCFC_W, ACCFC_I>(image8, coef.fc_k, coef.fc_b);
 }

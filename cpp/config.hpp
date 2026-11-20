@@ -121,6 +121,36 @@
 #endif
 
 
+// ---------------- Accumulateurs (somme des produits dans chaque couche) ----------------
+// W = 0 : format automatique sans perte (produit exact + bits de garde, ~40 bits).
+// En AC_WRAP les débordements intermédiaires se compensent : I n'a besoin de couvrir
+// que la valeur finale (même ordre que la sortie de la couche avant ReLU).
+#ifndef ACC1_W              // conv1 : 3 x k x k produits par sortie
+#define ACC1_W 0
+#endif
+#ifndef ACC1_I
+#define ACC1_I 0
+#endif
+#ifndef ACC2_W              // conv2 : 64 x k x k produits
+#define ACC2_W 0
+#endif
+#ifndef ACC2_I
+#define ACC2_I 0
+#endif
+#ifndef ACC3_W              // conv3 : 32 x k x k produits
+#define ACC3_W 0
+#endif
+#ifndef ACC3_I
+#define ACC3_I 0
+#endif
+#ifndef ACCFC_W             // perceptron : 180 produits
+#define ACCFC_W 0
+#endif
+#ifndef ACCFC_I
+#define ACCFC_I 0
+#endif
+
+
 // ============================================================
 // Types utilisés par le reste du code
 // ============================================================

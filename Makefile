@@ -3,7 +3,8 @@
 #  `make` seul affiche la liste des commandes.
 #  Pour documenter une nouvelle cible : `cible: deps ## description`
 #
-#  Arborescence imposée (vérifiée par `make tree-check`) :
+#  Arborescence imposée (vérifiée par `make tree-check`, qui ignore les
+#  périphériques /dev/null montés par le sandbox de Claude Code) :
 #    python/   référence algorithmique (.py uniquement)
 #    cpp/      modèle C++ virgule fixe + testbench
 #    hls/      sources et scripts Catapult (hls/include : ac_fixed.h, ac_int.h)
@@ -23,17 +24,17 @@ SRC_DIR := python
 SRCS    := $(wildcard $(SRC_DIR)/*.py)
 
 # --- Arborescence ---
-DIRS      := python cpp hls hls/include fpga data data/coef doc rapport build Results
+DIRS      := python cpp hls hls/include fpga data data/coef doc rapport build Results Exploration
 # Seuls ces éléments sont autorisés à la racine du dépôt
-ROOT_OK   := $(DIRS) Makefile README.md requirements.txt \
-             .gitignore .gitattributes .git .venv .claude
+ROOT_OK   := $(DIRS) Makefile README.md CLAUDE.md AGENTS.md requirements.txt \
+             .gitignore .gitattributes .git .venv .claude .vscode
 # Fichiers indispensables
 REQUIRED  := data/cifar-10-batches-bin/data_batch_1.bin \
              data/coef/CNN_coeff_3x3.txt \
              hls/include/ac_fixed.h
 
 .DEFAULT_GOAL := help
-.PHONY: help init tree tree-check venv check run clean distclean
+.PHONY: help init tree tree-check venv check run explore clean distclean
 
 help: ## Affiche cette aide
 	@echo "Commandes disponibles :"
@@ -61,6 +62,7 @@ tree-check: ## Vérifie que l'arborescence est respectée
 	done; \
 	for f in * .[!.]*; do \
 	  [ -e "$$f" ] || continue; \
+	  [ -c "$$f" ] && continue; \
 	  case " $(ROOT_OK) " in *" $$f "*) ;; \
 	    *) echo "✗ hors arborescence à la racine : $$f"; err=1;; esac; \
 	done; \
@@ -91,6 +93,9 @@ check: tree-check venv ## Vérifie l'arborescence et compile les .py
 
 run: check ## Lance python/main.py (crée le venv si besoin)
 	cd $(SRC_DIR) && "$(CURDIR)/$(PY)" main.py
+
+explore: venv ## Exploration bits/précision (ARGS="run --runs 3", "list", "plot"…)
+	"$(CURDIR)/$(PY)" Exploration/explore.py $(or $(ARGS),--help)
 
 clean: ## Supprime les caches et build/
 	rm -rf $(SRC_DIR)/__pycache__ build/*

@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <string>
 #include <cstdlib>
+#include <fstream>
 #include "config.hpp"
 #include "utils.hpp"
 #include "cnn.hpp"
@@ -23,10 +24,14 @@ static void print_format(const string& name, int W, int I, bool S) {
 
 
 /*
- * Usage : ./main [nb_images] [k_size] [batch]
+ * Usage : ./main [nb_images] [k_size] [batch] [--order FICHIER] [--trace]
  *     nb_images : nombre d'images à classer (0 = tout le fichier), défaut 100
  *     k_size    : noyau des convolutions, 3 ou 5, défaut 5
  *     batch     : fichier CIFAR-10, défaut data_batch_1.bin
+ *     --order   : fichier d'indices d'images (séparés par des espaces), évaluées dans cet ordre
+ *     --trace   : une ligne par image, pour Exploration/explore.py :
+ *                 "T <rang> <indice> <label> <prédiction> <marge>"
+ *                 marge = score(label) - meilleur score des autres classes (< 0 si erreur)
  *
  * Max-pool fixé à 3x3, pas de 2. Formats virgule fixe : config.hpp
  */
@@ -34,9 +39,19 @@ int main(int argc, char** argv) {
 
     cout << "=== MAIN CPP PROGRAM ===" << endl;
 
-    int    max_count = argc > 1 ? atoi(argv[1]) : 100;
-    int    k_size    = argc > 2 ? atoi(argv[2]) : 5;
-    string batch     = argc > 3 ? argv[3] : "data_batch_1.bin";
+    vector<string> pos;
+    string order_file;
+    bool trace = false;
+    for (int a = 1; a < argc; a++) {
+        string s = argv[a];
+        if (s == "--order" && a + 1 < argc) order_file = argv[++a];
+        else if (s == "--trace")            trace = true;
+        else                                pos.push_back(s);
+    }
+
+    int    max_count = pos.size() > 0 ? atoi(pos[0].c_str()) : 100;
+    int    k_size    = pos.size() > 1 ? atoi(pos[1].c_str()) : 5;
+    string batch     = pos.size() > 2 ? pos[2] : "data_batch_1.bin";
 
     if (k_size != 3 && k_size != 5) {
         cerr << "Erreur : k_size doit valoir 3 ou 5 (reçu " << k_size << ")" << endl;
@@ -65,6 +80,14 @@ int main(int argc, char** argv) {
     print_format("fc_k",  FCK_W,   FCK_I,   true);
     print_format("fc_b",  FCB_W,   FCB_I,   true);
     print_format("out",   OUT_W,   OUT_I,   true);
+    auto print_acc = [](const string& name, int W, int I) {
+        if (W > 0) print_format(name, W, I, true);
+        else cout << "  " << left << setw(10) << name << "automatique (sans perte)" << endl;
+    };
+    print_acc("acc1",  ACC1_W,  ACC1_I);
+    print_acc("acc2",  ACC2_W,  ACC2_I);
+    print_acc("acc3",  ACC3_W,  ACC3_I);
+    print_acc("accfc", ACCFC_W, ACCFC_I);
 
     try {
         //=== COEFFICIENTS ===//
@@ -82,14 +105,28 @@ int main(int argc, char** argv) {
 
         //=== IMAGES ===//
         int n_images = count_images(img_path);
-        if (max_count <= 0 || max_count > n_images) max_count = n_images;
+
+        // Ordre d'évaluation : 0, 1, 2... ou celui du fichier --order
+        vector<int> order;
+        if (!order_file.empty()) {
+            ifstream f(order_file);
+            if (!f) throw runtime_error("impossible d'ouvrir " + order_file);
+            int idx;
+            while (f >> idx) {
+                if (idx < 0 || idx >= n_images) throw runtime_error("indice d'image invalide : " + to_string(idx));
+                order.push_back(idx);
+            }
+        } else {
+            for (int i = 0; i < n_images; i++) order.push_back(i);
+        }
+        if (max_count <= 0 || max_count > (int)order.size()) max_count = (int)order.size();
 
         cout << "Noyau " << k_size << "x" << k_size << ", max-pool 3x3, "
              << max_count << " images de " << batch << endl;
 
         int works = 0;
         for (int n = 0; n < max_count; n++) {
-            RawImage raw = load_image(img_path, n);
+            RawImage raw = load_image(img_path, order[n]);
             imageT<IN_W, IN_I, true> image = to_image<IN_W, IN_I, true>(raw);
 
             vector<out_t> scores = cnn(image, coef);
@@ -99,8 +136,17 @@ int main(int argc, char** argv) {
                 if (scores[j] > scores[best]) best = j;
             if (best == raw.label) works++;
 
-            cout << "\r  image " << right << setw(5) << n + 1 << "/" << max_count
-                 << "  précision : " << fixed << setprecision(2) << 100.0 * works / (n + 1) << " %" << flush;
+            if (trace) {
+                double other = -1e300;
+                for (int j = 0; j < (int)scores.size(); j++)
+                    if (j != raw.label) other = max(other, scores[j].to_double());
+                double margin = scores[raw.label].to_double() - other;
+                cout << "T " << n + 1 << " " << order[n] << " " << raw.label << " " << best << " "
+                     << setprecision(6) << margin << endl;      // endl : explore.py lit au fil de l'eau
+            } else {
+                cout << "\r  image " << right << setw(5) << n + 1 << "/" << max_count
+                     << "  précision : " << fixed << setprecision(2) << 100.0 * works / (n + 1) << " %" << flush;
+            }
         }
         cout << endl;
 

@@ -1,0 +1,816 @@
+{
+ "run": "20261119-202628_k5_t1_s5947",
+ "status": "termin\u00e9",
+ "k": 5,
+ "images": 1000,
+ "batch": "data_batch_1.bin",
+ "threshold": 1.0,
+ "seed": 5947,
+ "order": "random",
+ "parallel_vars": 2,
+ "workers": 8,
+ "code": "c44f86cd67",
+ "duration_s": 3509.4,
+ "variables_done": 80,
+ "variables_total": 80,
+ "evaluations": 697,
+ "cached": 0,
+ "stats": {
+  "evals": 697,
+  "cached": 0,
+  "stopped": 262,
+  "killed": 282,
+  "rechecks": 43,
+  "img_saved": 387797,
+  "img_total": 308203
+ },
+ "reference": {
+  "acc": 89.0,
+  "id": "2ef2e7dd47",
+  "config": {
+   "input": [
+    6,
+    12
+   ],
+   "ker1": [
+    6,
+    16
+   ],
+   "bias1": [
+    6,
+    12
+   ],
+   "acc1": [
+    8,
+    18
+   ],
+   "conv1": [
+    8,
+    12
+   ],
+   "pool1": [
+    7,
+    12
+   ],
+   "ker2": [
+    4,
+    18
+   ],
+   "bias2": [
+    6,
+    12
+   ],
+   "acc2": [
+    11,
+    18
+   ],
+   "conv2": [
+    11,
+    12
+   ],
+   "pool2": [
+    9,
+    12
+   ],
+   "ker3": [
+    5,
+    14
+   ],
+   "bias3": [
+    6,
+    12
+   ],
+   "acc3": [
+    11,
+    18
+   ],
+   "conv3": [
+    11,
+    12
+   ],
+   "pool3": [
+    9,
+    12
+   ],
+   "fck": [
+    2,
+    12
+   ],
+   "fcb": [
+    6,
+    12
+   ],
+   "accfc": [
+    10,
+    18
+   ],
+   "out": [
+    10,
+    12
+   ]
+  },
+  "bits_mem": 22.103255454087193,
+  "bits_ops": 22.95797562375227
+ },
+ "final": {
+  "acc": 88.0,
+  "config": {
+   "input": [
+    4,
+    11
+   ],
+   "ker1": [
+    3,
+    15
+   ],
+   "bias1": [
+    3,
+    5
+   ],
+   "acc1": [
+    5,
+    12
+   ],
+   "conv1": [
+    5,
+    3
+   ],
+   "pool1": [
+    4,
+    3
+   ],
+   "ker2": [
+    1,
+    12
+   ],
+   "bias2": [
+    3,
+    2
+   ],
+   "acc2": [
+    9,
+    9
+   ],
+   "conv2": [
+    8,
+    1
+   ],
+   "pool2": [
+    5,
+    4
+   ],
+   "ker3": [
+    2,
+    11
+   ],
+   "bias3": [
+    3,
+    0
+   ],
+   "acc3": [
+    9,
+    6
+   ],
+   "conv3": [
+    9,
+    3
+   ],
+   "pool3": [
+    6,
+    3
+   ],
+   "fck": [
+    -1,
+    9
+   ],
+   "fcb": [
+    3,
+    2
+   ],
+   "accfc": [
+    7,
+    3
+   ],
+   "out": [
+    6,
+    2
+   ]
+  },
+  "id": "496686b826",
+  "bits_mem": 12.56250073268232,
+  "bits_ops": 13.65338232779813,
+  "kbits_mem": 2143.238
+ },
+ "path": [
+  {
+   "var": "accfc.I",
+   "value": 7,
+   "from": 10,
+   "id": "6bfe846ad6",
+   "acc": 89.0,
+   "pass": 1,
+   "tg": 141.8,
+   "bits_mem": 22.1031,
+   "bits_ops": 22.9578,
+   "duration_s": 111.2
+  },
+  {
+   "var": "acc3.F",
+   "value": 6,
+   "from": 18,
+   "id": "1ce58dbb0e",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 222.9,
+   "bits_mem": 22.0524,
+   "bits_ops": 22.744,
+   "duration_s": 192.4
+  },
+  {
+   "var": "bias2.I",
+   "value": 3,
+   "from": 6,
+   "id": "f968003f33",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 321.1,
+   "bits_mem": 22.0519,
+   "bits_ops": 22.7436,
+   "duration_s": 175.8
+  },
+  {
+   "var": "fcb.F",
+   "value": 2,
+   "from": 12,
+   "id": "b188370a63",
+   "acc": 88.2,
+   "pass": 1,
+   "tg": 411.0,
+   "bits_mem": 22.0513,
+   "bits_ops": 22.7436,
+   "duration_s": 88.4
+  },
+  {
+   "var": "ker3.F",
+   "value": 11,
+   "from": 14,
+   "id": "dd25d23de6",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 497.1,
+   "bits_mem": 21.7699,
+   "bits_ops": 22.6902,
+   "duration_s": 84.5
+  },
+  {
+   "var": "pool2.F",
+   "value": 6,
+   "from": 12,
+   "id": "3bfba4c697",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 594.4,
+   "bits_mem": 21.7294,
+   "bits_ops": 22.5834,
+   "duration_s": 95.4
+  },
+  {
+   "var": "accfc.F",
+   "value": 3,
+   "from": 18,
+   "id": "046819186a",
+   "acc": 88.4,
+   "pass": 1,
+   "tg": 654.3,
+   "bits_mem": 21.7285,
+   "bits_ops": 22.5826,
+   "duration_s": 428.9
+  },
+  {
+   "var": "ker1.I",
+   "value": 3,
+   "from": 6,
+   "id": "f5761c839f",
+   "acc": 88.4,
+   "pass": 1,
+   "tg": 749.5,
+   "bits_mem": 21.6441,
+   "bits_ops": 22.3263,
+   "duration_s": 153.6
+  },
+  {
+   "var": "fck.F",
+   "value": 9,
+   "from": 12,
+   "id": "cf2fbeadaa",
+   "acc": 88.1,
+   "pass": 1,
+   "tg": 845.7,
+   "bits_mem": 21.6125,
+   "bits_ops": 22.3261,
+   "duration_s": 93.8
+  },
+  {
+   "var": "bias2.F",
+   "value": 2,
+   "from": 12,
+   "id": "811c28d2d5",
+   "acc": 88.4,
+   "pass": 1,
+   "tg": 938.8,
+   "bits_mem": 21.6106,
+   "bits_ops": 22.3247,
+   "duration_s": 91.2
+  },
+  {
+   "var": "acc1.I",
+   "value": 5,
+   "from": 8,
+   "id": "0ef71b0e9c",
+   "acc": 88.5,
+   "pass": 1,
+   "tg": 1004.8,
+   "bits_mem": 20.9624,
+   "bits_ops": 22.065,
+   "duration_s": 64.0
+  },
+  {
+   "var": "acc2.F",
+   "value": 9,
+   "from": 18,
+   "id": "d1208fb9a9",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 1065.7,
+   "bits_mem": 20.7193,
+   "bits_ops": 20.0137,
+   "duration_s": 409.8
+  },
+  {
+   "var": "conv1.I",
+   "value": 5,
+   "from": 8,
+   "id": "7f6d6b73b7",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 1135.8,
+   "bits_mem": 20.0711,
+   "bits_ops": 20.0026,
+   "duration_s": 128.5
+  },
+  {
+   "var": "pool1.I",
+   "value": 4,
+   "from": 7,
+   "id": "1ac5e42b94",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 1234.4,
+   "bits_mem": 19.909,
+   "bits_ops": 19.3193,
+   "duration_s": 166.6
+  },
+  {
+   "var": "pool1.F",
+   "value": 3,
+   "from": 12,
+   "id": "1b5de5973a",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 1314.2,
+   "bits_mem": 19.4228,
+   "bits_ops": 17.2692,
+   "duration_s": 77.8
+  },
+  {
+   "var": "pool3.F",
+   "value": 5,
+   "from": 12,
+   "id": "3a7e8d4186",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 1409.1,
+   "bits_mem": 19.4154,
+   "bits_ops": 17.2688,
+   "duration_s": 271.0
+  },
+  {
+   "var": "input.I",
+   "value": 4,
+   "from": 6,
+   "id": "1b8f1bb991",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 1458.0,
+   "bits_mem": 19.3952,
+   "bits_ops": 17.098,
+   "duration_s": 46.8
+  },
+  {
+   "var": "bias3.F",
+   "value": 0,
+   "from": 12,
+   "id": "53b7be53ec",
+   "acc": 88.1,
+   "pass": 1,
+   "tg": 1513.7,
+   "bits_mem": 19.3938,
+   "bits_ops": 17.0977,
+   "duration_s": 197.6
+  },
+  {
+   "var": "acc3.I",
+   "value": 9,
+   "from": 11,
+   "id": "eb1bf32f39",
+   "acc": 88.1,
+   "pass": 1,
+   "tg": 1559.9,
+   "bits_mem": 19.3853,
+   "bits_ops": 17.0621,
+   "duration_s": 44.1
+  },
+  {
+   "var": "bias3.I",
+   "value": 3,
+   "from": 6,
+   "id": "0c53081437",
+   "acc": 88.1,
+   "pass": 1,
+   "tg": 1600.9,
+   "bits_mem": 19.385,
+   "bits_ops": 17.062,
+   "duration_s": 38.8
+  },
+  {
+   "var": "input.F",
+   "value": 11,
+   "from": 12,
+   "id": "7c9f1bfab1",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1657.2,
+   "bits_mem": 19.3749,
+   "bits_ops": 16.9766,
+   "duration_s": 54.0
+  },
+  {
+   "var": "fck.I",
+   "value": -1,
+   "from": 2,
+   "id": "d4e3dc3931",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1696.3,
+   "bits_mem": 19.3432,
+   "bits_ops": 16.9765,
+   "duration_s": 36.9
+  },
+  {
+   "var": "pool2.I",
+   "value": 6,
+   "from": 9,
+   "id": "c344b30a00",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1748.3,
+   "bits_mem": 19.323,
+   "bits_ops": 16.9231,
+   "duration_s": 49.7
+  },
+  {
+   "var": "conv2.I",
+   "value": 9,
+   "from": 11,
+   "id": "ac19a3492f",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1840.5,
+   "bits_mem": 19.2689,
+   "bits_ops": 16.9221,
+   "duration_s": 380.4
+  },
+  {
+   "var": "ker3.I",
+   "value": 2,
+   "from": 5,
+   "id": "25714fe7ef",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1912.7,
+   "bits_mem": 18.9876,
+   "bits_ops": 16.8688,
+   "duration_s": 115.9
+  },
+  {
+   "var": "acc2.I",
+   "value": 9,
+   "from": 11,
+   "id": "04419f138c",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1958.0,
+   "bits_mem": 18.9336,
+   "bits_ops": 16.4129,
+   "duration_s": 42.4
+  },
+  {
+   "var": "conv3.I",
+   "value": 9,
+   "from": 11,
+   "id": "8da9570d4c",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2006.2,
+   "bits_mem": 18.9251,
+   "bits_ops": 16.4128,
+   "duration_s": 45.7
+  },
+  {
+   "var": "conv2.F",
+   "value": 6,
+   "from": 12,
+   "id": "d0746583e4",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2051.1,
+   "bits_mem": 18.7631,
+   "bits_ops": 16.41,
+   "duration_s": 208.3
+  },
+  {
+   "var": "fcb.I",
+   "value": 3,
+   "from": 6,
+   "id": "f1962a00c8",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2094.6,
+   "bits_mem": 18.7629,
+   "bits_ops": 16.41,
+   "duration_s": 85.2
+  },
+  {
+   "var": "ker1.F",
+   "value": 15,
+   "from": 16,
+   "id": "19f4e8f8a4",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2150.1,
+   "bits_mem": 18.7348,
+   "bits_ops": 16.3246,
+   "duration_s": 53.2
+  },
+  {
+   "var": "out.I",
+   "value": 7,
+   "from": 10,
+   "id": "1c11b66210",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2195.8,
+   "bits_mem": 18.7346,
+   "bits_ops": 16.3246,
+   "duration_s": 141.3
+  },
+  {
+   "var": "ker2.I",
+   "value": 1,
+   "from": 4,
+   "id": "0767d7652d",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2264.7,
+   "bits_mem": 17.8343,
+   "bits_ops": 15.6412,
+   "duration_s": 112.2
+  },
+  {
+   "var": "bias1.F",
+   "value": 6,
+   "from": 12,
+   "id": "b86c5aa167",
+   "acc": 88.4,
+   "pass": 1,
+   "tg": 2337.7,
+   "bits_mem": 17.832,
+   "bits_ops": 15.6344,
+   "duration_s": 139.4
+  },
+  {
+   "var": "pool3.I",
+   "value": 6,
+   "from": 9,
+   "id": "dcee85bd27",
+   "acc": 88.4,
+   "pass": 1,
+   "tg": 2394.6,
+   "bits_mem": 17.8288,
+   "bits_ops": 15.6342,
+   "duration_s": 54.4
+  },
+  {
+   "var": "out.F",
+   "value": 2,
+   "from": 12,
+   "id": "59e562f696",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 2454.0,
+   "bits_mem": 17.8283,
+   "bits_ops": 15.6342,
+   "duration_s": 56.8
+  },
+  {
+   "var": "conv3.F",
+   "value": 5,
+   "from": 12,
+   "id": "21f70db4cb",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 2501.2,
+   "bits_mem": 17.7987,
+   "bits_ops": 15.6337,
+   "duration_s": 231.6
+  },
+  {
+   "var": "bias1.I",
+   "value": 3,
+   "from": 6,
+   "id": "3670b2bd26",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 2567.9,
+   "bits_mem": 17.7976,
+   "bits_ops": 15.6303,
+   "duration_s": 111.6
+  },
+  {
+   "var": "conv1.F",
+   "value": 3,
+   "from": 12,
+   "id": "43c70cd415",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 2648.7,
+   "bits_mem": 15.8529,
+   "bits_ops": 15.597,
+   "duration_s": 77.1
+  },
+  {
+   "var": "ker2.F",
+   "value": 13,
+   "from": 18,
+   "id": "49e9be4521",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2703.3,
+   "bits_mem": 14.3524,
+   "bits_ops": 14.4581,
+   "duration_s": 199.9
+  },
+  {
+   "var": "acc1.F",
+   "value": 12,
+   "from": 18,
+   "id": "2209f3b0f4",
+   "acc": 88.4,
+   "pass": 2,
+   "tg": 2852.0,
+   "bits_mem": 13.0559,
+   "bits_ops": 13.9387,
+   "duration_s": 80.4
+  },
+  {
+   "var": "pool2.F",
+   "value": 4,
+   "from": 6,
+   "id": "51e08f2152",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 2954.1,
+   "bits_mem": 13.0424,
+   "bits_ops": 13.9031,
+   "duration_s": 51.6
+  },
+  {
+   "var": "conv3.F",
+   "value": 3,
+   "from": 5,
+   "id": "c149dabec7",
+   "acc": 88.2,
+   "pass": 2,
+   "tg": 3012.5,
+   "bits_mem": 13.034,
+   "bits_ops": 13.903,
+   "duration_s": 173.2
+  },
+  {
+   "var": "conv2.I",
+   "value": 8,
+   "from": 9,
+   "id": "cc0adef450",
+   "acc": 88.1,
+   "pass": 2,
+   "tg": 3080.6,
+   "bits_mem": 13.007,
+   "bits_ops": 13.9025,
+   "duration_s": 37.6
+  },
+  {
+   "var": "bias1.F",
+   "value": 5,
+   "from": 6,
+   "id": "c7b2bfe543",
+   "acc": 88.4,
+   "pass": 2,
+   "tg": 3158.6,
+   "bits_mem": 13.0066,
+   "bits_ops": 13.9014,
+   "duration_s": 81.1
+  },
+  {
+   "var": "pool3.F",
+   "value": 3,
+   "from": 5,
+   "id": "84abb8d377",
+   "acc": 88.4,
+   "pass": 2,
+   "tg": 3255.3,
+   "bits_mem": 13.0045,
+   "bits_ops": 13.9013,
+   "duration_s": 49.1
+  },
+  {
+   "var": "conv2.F",
+   "value": 1,
+   "from": 6,
+   "id": "0ab7fa0042",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 3313.8,
+   "bits_mem": 12.8694,
+   "bits_ops": 13.899,
+   "duration_s": 55.3
+  },
+  {
+   "var": "pool2.I",
+   "value": 5,
+   "from": 6,
+   "id": "762dfbc6c9",
+   "acc": 88.1,
+   "pass": 2,
+   "tg": 3360.0,
+   "bits_mem": 12.8627,
+   "bits_ops": 13.8812,
+   "duration_s": 88.4
+  },
+  {
+   "var": "out.I",
+   "value": 6,
+   "from": 7,
+   "id": "ad7457dae4",
+   "acc": 88.1,
+   "pass": 2,
+   "tg": 3448.2,
+   "bits_mem": 12.8626,
+   "bits_ops": 13.8812,
+   "duration_s": 65.9
+  },
+  {
+   "var": "ker2.F",
+   "value": 12,
+   "from": 13,
+   "id": "496686b826",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 3507.3,
+   "bits_mem": 12.5625,
+   "bits_ops": 13.6534,
+   "duration_s": 49.2
+  }
+ ],
+ "passes": [
+  {
+   "pass": 1,
+   "reductions": 39,
+   "bits_start": 22.103,
+   "bits_end": 14.352,
+   "gain": -7.751,
+   "evaluations": 451,
+   "t_start": 36.4,
+   "t_end": 2703.3
+  },
+  {
+   "pass": 2,
+   "reductions": 10,
+   "bits_start": 14.352,
+   "bits_end": 12.562,
+   "gain": -1.79,
+   "evaluations": 245,
+   "t_start": 2660.8,
+   "t_end": 3507.3
+  }
+ ]
+}

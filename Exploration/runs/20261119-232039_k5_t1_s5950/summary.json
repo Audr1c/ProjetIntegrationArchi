@@ -1,0 +1,792 @@
+{
+ "run": "20261119-232039_k5_t1_s5950",
+ "status": "termin\u00e9",
+ "k": 5,
+ "images": 1000,
+ "batch": "data_batch_1.bin",
+ "threshold": 1.0,
+ "seed": 5950,
+ "order": "random",
+ "parallel_vars": 2,
+ "workers": 8,
+ "code": "c44f86cd67",
+ "duration_s": 4090.5,
+ "variables_done": 80,
+ "variables_total": 80,
+ "evaluations": 793,
+ "cached": 1,
+ "stats": {
+  "evals": 793,
+  "cached": 1,
+  "stopped": 329,
+  "killed": 321,
+  "rechecks": 37,
+  "img_saved": 436496,
+  "img_total": 355504
+ },
+ "reference": {
+  "acc": 89.0,
+  "id": "2ef2e7dd47",
+  "config": {
+   "input": [
+    6,
+    12
+   ],
+   "ker1": [
+    6,
+    16
+   ],
+   "bias1": [
+    6,
+    12
+   ],
+   "acc1": [
+    8,
+    18
+   ],
+   "conv1": [
+    8,
+    12
+   ],
+   "pool1": [
+    7,
+    12
+   ],
+   "ker2": [
+    4,
+    18
+   ],
+   "bias2": [
+    6,
+    12
+   ],
+   "acc2": [
+    11,
+    18
+   ],
+   "conv2": [
+    11,
+    12
+   ],
+   "pool2": [
+    9,
+    12
+   ],
+   "ker3": [
+    5,
+    14
+   ],
+   "bias3": [
+    6,
+    12
+   ],
+   "acc3": [
+    11,
+    18
+   ],
+   "conv3": [
+    11,
+    12
+   ],
+   "pool3": [
+    9,
+    12
+   ],
+   "fck": [
+    2,
+    12
+   ],
+   "fcb": [
+    6,
+    12
+   ],
+   "accfc": [
+    10,
+    18
+   ],
+   "out": [
+    10,
+    12
+   ]
+  },
+  "bits_mem": 22.103255454087193,
+  "bits_ops": 22.95797562375227
+ },
+ "final": {
+  "acc": 88.0,
+  "config": {
+   "input": [
+    3,
+    6
+   ],
+   "ker1": [
+    3,
+    14
+   ],
+   "bias1": [
+    3,
+    9
+   ],
+   "acc1": [
+    5,
+    18
+   ],
+   "conv1": [
+    5,
+    10
+   ],
+   "pool1": [
+    4,
+    9
+   ],
+   "ker2": [
+    1,
+    17
+   ],
+   "bias2": [
+    3,
+    8
+   ],
+   "acc2": [
+    8,
+    17
+   ],
+   "conv2": [
+    8,
+    2
+   ],
+   "pool2": [
+    5,
+    2
+   ],
+   "ker3": [
+    2,
+    14
+   ],
+   "bias3": [
+    3,
+    6
+   ],
+   "acc3": [
+    9,
+    15
+   ],
+   "conv3": [
+    9,
+    3
+   ],
+   "pool3": [
+    7,
+    7
+   ],
+   "fck": [
+    -1,
+    12
+   ],
+   "fcb": [
+    3,
+    6
+   ],
+   "accfc": [
+    7,
+    6
+   ],
+   "out": [
+    7,
+    5
+   ]
+  },
+  "id": "e08e51b95b",
+  "bits_mem": 17.670046774439353,
+  "bits_ops": 17.886563095635537,
+  "kbits_mem": 3014.616
+ },
+ "path": [
+  {
+   "var": "pool2.I",
+   "value": 5,
+   "from": 9,
+   "id": "18af03c3f3",
+   "acc": 89.0,
+   "pass": 1,
+   "tg": 83.3,
+   "bits_mem": 22.0762,
+   "bits_ops": 22.8868,
+   "duration_s": 82.0
+  },
+  {
+   "var": "ker2.I",
+   "value": 1,
+   "from": 4,
+   "id": "c58de299a7",
+   "acc": 89.0,
+   "pass": 1,
+   "tg": 138.9,
+   "bits_mem": 21.1759,
+   "bits_ops": 22.2034,
+   "duration_s": 54.4
+  },
+  {
+   "var": "input.I",
+   "value": 3,
+   "from": 6,
+   "id": "16dc992062",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 201.3,
+   "bits_mem": 21.1455,
+   "bits_ops": 21.9472,
+   "duration_s": 60.9
+  },
+  {
+   "var": "fck.I",
+   "value": -1,
+   "from": 2,
+   "id": "4ccc2b85c5",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 275.3,
+   "bits_mem": 21.1139,
+   "bits_ops": 21.947,
+   "duration_s": 274.0
+  },
+  {
+   "var": "bias3.I",
+   "value": 3,
+   "from": 6,
+   "id": "c647849ec7",
+   "acc": 88.3,
+   "pass": 1,
+   "tg": 366.6,
+   "bits_mem": 21.1135,
+   "bits_ops": 21.947,
+   "duration_s": 163.6
+  },
+  {
+   "var": "pool1.I",
+   "value": 4,
+   "from": 7,
+   "id": "d42e1cb0bd",
+   "acc": 88.1,
+   "pass": 1,
+   "tg": 441.1,
+   "bits_mem": 20.9515,
+   "bits_ops": 21.2636,
+   "duration_s": 73.0
+  },
+  {
+   "var": "acc2.I",
+   "value": 8,
+   "from": 11,
+   "id": "6d952aaefe",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 501.7,
+   "bits_mem": 20.8705,
+   "bits_ops": 20.5798,
+   "duration_s": 58.9
+  },
+  {
+   "var": "conv2.I",
+   "value": 8,
+   "from": 11,
+   "id": "5c2cf17bff",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 572.4,
+   "bits_mem": 20.7894,
+   "bits_ops": 20.5784,
+   "duration_s": 69.3
+  },
+  {
+   "var": "accfc.F",
+   "value": 6,
+   "from": 18,
+   "id": "18dd84198a",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 714.7,
+   "bits_mem": 20.7887,
+   "bits_ops": 20.5778,
+   "duration_s": 437.5
+  },
+  {
+   "var": "fcb.F",
+   "value": 6,
+   "from": 12,
+   "id": "e57a9ff1f7",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 846.8,
+   "bits_mem": 20.7884,
+   "bits_ops": 20.5778,
+   "duration_s": 130.4
+  },
+  {
+   "var": "pool2.F",
+   "value": 10,
+   "from": 12,
+   "id": "4d70dd7e08",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 952.0,
+   "bits_mem": 20.7749,
+   "bits_ops": 20.5422,
+   "duration_s": 374.6
+  },
+  {
+   "var": "conv2.F",
+   "value": 10,
+   "from": 12,
+   "id": "82f8289145",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1064.5,
+   "bits_mem": 20.7208,
+   "bits_ops": 20.5413,
+   "duration_s": 214.1
+  },
+  {
+   "var": "accfc.I",
+   "value": 7,
+   "from": 10,
+   "id": "e0768476a4",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1130.7,
+   "bits_mem": 20.7207,
+   "bits_ops": 20.5411,
+   "duration_s": 63.9
+  },
+  {
+   "var": "conv3.I",
+   "value": 9,
+   "from": 11,
+   "id": "cded51d2af",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1192.2,
+   "bits_mem": 20.7122,
+   "bits_ops": 20.5409,
+   "duration_s": 165.0
+  },
+  {
+   "var": "acc3.I",
+   "value": 9,
+   "from": 11,
+   "id": "163a99fee1",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1252.9,
+   "bits_mem": 20.7038,
+   "bits_ops": 20.5053,
+   "duration_s": 120.7
+  },
+  {
+   "var": "out.I",
+   "value": 7,
+   "from": 10,
+   "id": "9a04996fa0",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1317.6,
+   "bits_mem": 20.7036,
+   "bits_ops": 20.5053,
+   "duration_s": 62.6
+  },
+  {
+   "var": "bias2.I",
+   "value": 3,
+   "from": 6,
+   "id": "ba192f36b0",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1406.9,
+   "bits_mem": 20.703,
+   "bits_ops": 20.5049,
+   "duration_s": 212.9
+  },
+  {
+   "var": "conv1.I",
+   "value": 6,
+   "from": 8,
+   "id": "4fb43c59eb",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1458.6,
+   "bits_mem": 20.2709,
+   "bits_ops": 20.4975,
+   "duration_s": 49.9
+  },
+  {
+   "var": "input.F",
+   "value": 10,
+   "from": 12,
+   "id": "e4fe8e832f",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1551.4,
+   "bits_mem": 20.2506,
+   "bits_ops": 20.3266,
+   "duration_s": 91.1
+  },
+  {
+   "var": "conv3.F",
+   "value": 10,
+   "from": 12,
+   "id": "292c8ccf91",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1612.3,
+   "bits_mem": 20.2422,
+   "bits_ops": 20.3265,
+   "duration_s": 292.9
+  },
+  {
+   "var": "bias1.I",
+   "value": 3,
+   "from": 6,
+   "id": "020ca2c824",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1692.5,
+   "bits_mem": 20.2411,
+   "bits_ops": 20.3231,
+   "duration_s": 138.9
+  },
+  {
+   "var": "ker1.F",
+   "value": 15,
+   "from": 16,
+   "id": "ebbf27c608",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1798.3,
+   "bits_mem": 20.2129,
+   "bits_ops": 20.2377,
+   "duration_s": 101.4
+  },
+  {
+   "var": "bias3.F",
+   "value": 9,
+   "from": 12,
+   "id": "def8ca030d",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1880.5,
+   "bits_mem": 20.2126,
+   "bits_ops": 20.2376,
+   "duration_s": 197.9
+  },
+  {
+   "var": "bias1.F",
+   "value": 9,
+   "from": 12,
+   "id": "3b32e7f936",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 1944.9,
+   "bits_mem": 20.2115,
+   "bits_ops": 20.2342,
+   "duration_s": 144.8
+  },
+  {
+   "var": "pool3.I",
+   "value": 7,
+   "from": 9,
+   "id": "40eb17376b",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2022.0,
+   "bits_mem": 20.2093,
+   "bits_ops": 20.2341,
+   "duration_s": 139.6
+  },
+  {
+   "var": "pool1.F",
+   "value": 11,
+   "from": 12,
+   "id": "b494649ab3",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2075.5,
+   "bits_mem": 20.1553,
+   "bits_ops": 20.0063,
+   "duration_s": 127.9
+  },
+  {
+   "var": "conv1.F",
+   "value": 11,
+   "from": 12,
+   "id": "fa6943a9b2",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2153.0,
+   "bits_mem": 19.9393,
+   "bits_ops": 20.0026,
+   "duration_s": 75.6
+  },
+  {
+   "var": "ker3.I",
+   "value": 2,
+   "from": 5,
+   "id": "8b01c6ae4b",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2231.0,
+   "bits_mem": 19.6579,
+   "bits_ops": 19.9492,
+   "duration_s": 207.3
+  },
+  {
+   "var": "ker2.F",
+   "value": 17,
+   "from": 18,
+   "id": "a8030b625d",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2301.9,
+   "bits_mem": 19.3578,
+   "bits_ops": 19.7214,
+   "duration_s": 65.9
+  },
+  {
+   "var": "acc1.I",
+   "value": 6,
+   "from": 8,
+   "id": "90c1fc627d",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2412.2,
+   "bits_mem": 18.9256,
+   "bits_ops": 19.5483,
+   "duration_s": 185.5
+  },
+  {
+   "var": "bias2.F",
+   "value": 8,
+   "from": 12,
+   "id": "06e5b1a57e",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2479.1,
+   "bits_mem": 18.9249,
+   "bits_ops": 19.5477,
+   "duration_s": 175.0
+  },
+  {
+   "var": "fcb.I",
+   "value": 3,
+   "from": 6,
+   "id": "cb87660ba2",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2568.0,
+   "bits_mem": 18.9247,
+   "bits_ops": 19.5477,
+   "duration_s": 83.7
+  },
+  {
+   "var": "acc3.F",
+   "value": 15,
+   "from": 18,
+   "id": "1ff6b6426e",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2623.3,
+   "bits_mem": 18.9121,
+   "bits_ops": 19.4943,
+   "duration_s": 157.3
+  },
+  {
+   "var": "ker1.I",
+   "value": 3,
+   "from": 6,
+   "id": "ec12816989",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2697.8,
+   "bits_mem": 18.8276,
+   "bits_ops": 19.238,
+   "duration_s": 127.2
+  },
+  {
+   "var": "out.F",
+   "value": 5,
+   "from": 12,
+   "id": "508b535baf",
+   "acc": 88.0,
+   "pass": 1,
+   "tg": 2806.0,
+   "bits_mem": 18.8272,
+   "bits_ops": 19.238,
+   "duration_s": 180.5
+  },
+  {
+   "var": "pool3.F",
+   "value": 7,
+   "from": 12,
+   "id": "4991e2633b",
+   "acc": 88.1,
+   "pass": 1,
+   "tg": 2853.1,
+   "bits_mem": 18.822,
+   "bits_ops": 19.2377,
+   "duration_s": 153.0
+  },
+  {
+   "var": "conv1.F",
+   "value": 10,
+   "from": 11,
+   "id": "d7e17430fb",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 2984.5,
+   "bits_mem": 18.6059,
+   "bits_ops": 19.234,
+   "duration_s": 138.8
+  },
+  {
+   "var": "conv2.F",
+   "value": 2,
+   "from": 10,
+   "id": "9e807ea24c",
+   "acc": 88.1,
+   "pass": 2,
+   "tg": 3230.2,
+   "bits_mem": 18.3898,
+   "bits_ops": 19.2303,
+   "duration_s": 78.6
+  },
+  {
+   "var": "ker1.F",
+   "value": 14,
+   "from": 15,
+   "id": "27febb655a",
+   "acc": 88.1,
+   "pass": 2,
+   "tg": 3300.8,
+   "bits_mem": 18.3617,
+   "bits_ops": 19.1449,
+   "duration_s": 111.7
+  },
+  {
+   "var": "input.F",
+   "value": 6,
+   "from": 10,
+   "id": "6bf38cf787",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 3388.3,
+   "bits_mem": 18.3212,
+   "bits_ops": 18.8032,
+   "duration_s": 81.8
+  },
+  {
+   "var": "conv3.F",
+   "value": 3,
+   "from": 10,
+   "id": "ab7703d7e5",
+   "acc": 88.2,
+   "pass": 2,
+   "tg": 3496.7,
+   "bits_mem": 18.2916,
+   "bits_ops": 18.8027,
+   "duration_s": 85.0
+  },
+  {
+   "var": "conv1.I",
+   "value": 5,
+   "from": 6,
+   "id": "1834053060",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 3579.0,
+   "bits_mem": 18.0755,
+   "bits_ops": 18.799,
+   "duration_s": 52.0
+  },
+  {
+   "var": "pool1.F",
+   "value": 9,
+   "from": 11,
+   "id": "bc48115140",
+   "acc": 88.1,
+   "pass": 2,
+   "tg": 3684.6,
+   "bits_mem": 17.9675,
+   "bits_ops": 18.3435,
+   "duration_s": 84.0
+  },
+  {
+   "var": "pool2.F",
+   "value": 2,
+   "from": 10,
+   "id": "ff79f2e588",
+   "acc": 88.1,
+   "pass": 2,
+   "tg": 3757.6,
+   "bits_mem": 17.9135,
+   "bits_ops": 18.2011,
+   "duration_s": 143.8
+  },
+  {
+   "var": "bias3.F",
+   "value": 6,
+   "from": 9,
+   "id": "1991aef9f4",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 3859.3,
+   "bits_mem": 17.9131,
+   "bits_ops": 18.201,
+   "duration_s": 109.6
+  },
+  {
+   "var": "acc1.I",
+   "value": 5,
+   "from": 6,
+   "id": "d3e351232a",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 3985.3,
+   "bits_mem": 17.6971,
+   "bits_ops": 18.1145,
+   "duration_s": 49.1
+  },
+  {
+   "var": "acc2.F",
+   "value": 17,
+   "from": 18,
+   "id": "e08e51b95b",
+   "acc": 88.0,
+   "pass": 2,
+   "tg": 4052.6,
+   "bits_mem": 17.67,
+   "bits_ops": 17.8866,
+   "duration_s": 62.8
+  }
+ ],
+ "passes": [
+  {
+   "pass": 1,
+   "reductions": 36,
+   "bits_start": 22.103,
+   "bits_end": 18.822,
+   "gain": -3.281,
+   "evaluations": 469,
+   "t_start": 13.0,
+   "t_end": 2853.1
+  },
+  {
+   "pass": 2,
+   "reductions": 11,
+   "bits_start": 18.822,
+   "bits_end": 17.67,
+   "gain": -1.152,
+   "evaluations": 323,
+   "t_start": 2817.0,
+   "t_end": 4087.6
+  }
+ ]
+}

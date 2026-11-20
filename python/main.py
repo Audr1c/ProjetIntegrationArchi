@@ -30,7 +30,7 @@ def main() :
     
     max_count = 10
     k_size = 5
-    max_pool_ksize = 5
+    max_pool_ksize = 3
     pool_mode = POOL_TF_SAME  # POOL_TF_SAME | POOL_CENTERED
     
     tensors = parse_tensors(os.path.join(

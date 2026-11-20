@@ -44,10 +44,10 @@ ac_fixed<W, I, S> get_valid_pixel(
 
 template <
     int W_o, int I_o, bool S_o,  // Image output
+    int W_acc, int I_acc,        // Accumulateur (0 = automatique)
     int W_i, int I_i, bool S_i,  // Image input
     int W_k, int I_k, bool S_k,  // Kernel
-    int W_b, int I_b, bool S_b,  // Bias
-    int G                        // Bits de garde de l'accumulateur
+    int W_b, int I_b, bool S_b   // Bias
 >
 imageT<W_o, I_o, S_o> convolution_feature(
     const imageT<W_i, I_i, S_i>& img,
@@ -57,11 +57,12 @@ imageT<W_o, I_o, S_o> convolution_feature(
     // image  : [L][H][W]      kernel : [C][L][M][N]      sortie : [C][H][W]
     // S[c][r][k] = sum_{l,m,n} I[l][r+m-M/2][k+n-N/2] * K[c][l][m][n] + b[c]
 
-    // Accumulateur : produit exact + G bits de garde (+ place pour le biais)
+    // Accumulateur : imposé (W_acc > 0) ou automatique = produit exact + G bits de garde + biais
     typedef typename ac_fixed<W_i, I_i, S_i>::template rt<W_k, I_k, S_k>::mult mult_t;
-    constexpr int F_acc = AC_MAX(mult_t::width - mult_t::i_width, W_b - I_b);
-    constexpr int I_acc = AC_MAX(mult_t::i_width + G, I_b) + 1;
-    typedef ac_fixed<I_acc + F_acc, I_acc, true> acc_t;
+    constexpr int G      = 11;
+    constexpr int F_auto = AC_MAX(mult_t::width - mult_t::i_width, W_b - I_b);
+    constexpr int I_auto = AC_MAX(mult_t::i_width + G, I_b) + 1;
+    typedef ac_fixed<(W_acc > 0 ? W_acc : I_auto + F_auto), (W_acc > 0 ? I_acc : I_auto), true> acc_t;
 
     imageT<W_o, I_o, S_o> img_o;
     img_o.channels = ker.C;
@@ -92,10 +93,10 @@ imageT<W_o, I_o, S_o> convolution_feature(
 
 template <
     int W_o, int I_o, bool S_o,  // Sortie S
+    int W_acc, int I_acc,        // Accumulateur (0 = automatique)
     int W_a, int I_a, bool S_a,  // Input A
     int W_m, int I_m, bool S_m,  // Matrix B
-    int W_c, int I_c, bool S_c,  // Input C
-    int G                        // Bits de garde de l'accumulateur
+    int W_c, int I_c, bool S_c   // Input C
 >
 vector<ac_fixed<W_o, I_o, S_o>> m_acc(
     const vector<ac_fixed<W_a, I_a, S_a>>& A,
@@ -104,9 +105,10 @@ vector<ac_fixed<W_o, I_o, S_o>> m_acc(
 ) {
     // S_j = sum_k A_k * B_{k,j} + C_j      B : M lignes (= A.size()) x N colonnes (= C.size())
     typedef typename ac_fixed<W_a, I_a, S_a>::template rt<W_m, I_m, S_m>::mult mult_t;
-    constexpr int F_acc = AC_MAX(mult_t::width - mult_t::i_width, W_c - I_c);
-    constexpr int I_acc = AC_MAX(mult_t::i_width + G, I_c) + 1;
-    typedef ac_fixed<I_acc + F_acc, I_acc, true> acc_t;
+    constexpr int G      = 8;
+    constexpr int F_auto = AC_MAX(mult_t::width - mult_t::i_width, W_c - I_c);
+    constexpr int I_auto = AC_MAX(mult_t::i_width + G, I_c) + 1;
+    typedef ac_fixed<(W_acc > 0 ? W_acc : I_auto + F_auto), (W_acc > 0 ? I_acc : I_auto), true> acc_t;
 
     // Boucle k externe, j interne : B est parcourue ligne par ligne (contiguë)
     vector<acc_t> acc(B.N);

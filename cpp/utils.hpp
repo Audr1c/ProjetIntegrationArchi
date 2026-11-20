@@ -76,12 +76,18 @@ ac_fixed<W, I, S> get_valid_pixel(
 // Convolution feature
 // ============================================================
 
+/*
+ * Accumulateur ac_fixed<W_acc, I_acc, true> : W_acc = 0 -> format automatique, sans aucune perte :
+ * produit exact + 11 bits de garde (ceil(log2(64*5*5)), pire cas du réseau) + place pour le biais.
+ * En AC_WRAP (défaut), les débordements intermédiaires se compensent : I_acc n'a besoin que
+ * de couvrir la dynamique du résultat final.
+ */
 template <
-    int W_o, int I_o, bool S_o,  // Image output
-    int W_i, int I_i, bool S_i,  // Image input
-    int W_k, int I_k, bool S_k,  // Kernel
-    int W_b, int I_b, bool S_b,  // Bias
-    int G = 11                   // Bits de garde : ceil(log2(64*5*5)) = 11 (pire cas du réseau)
+    int W_o, int I_o, bool S_o,          // Image output
+    int W_acc = 0, int I_acc = 0,        // Accumulateur (0 = automatique)
+    int W_i, int I_i, bool S_i,          // Image input   (déduit)
+    int W_k, int I_k, bool S_k,          // Kernel        (déduit)
+    int W_b, int I_b, bool S_b           // Bias          (déduit)
 >
 imageT<W_o, I_o, S_o> convolution_feature(
     const imageT<W_i, I_i, S_i>& img,
@@ -94,12 +100,13 @@ imageT<W_o, I_o, S_o> convolution_feature(
 // Matrix accumulation
 // ============================================================
 
+// Accumulateur : comme convolution_feature (W_acc = 0 -> automatique, 8 bits de garde = ceil(log2(180)))
 template <
-    int W_o, int I_o, bool S_o,  // Sortie S
-    int W_a, int I_a, bool S_a,  // Input A
-    int W_m, int I_m, bool S_m,  // Matrix B
-    int W_c, int I_c, bool S_c,  // Input C
-    int G = 8                    // Bits de garde : ceil(log2(180)) = 8
+    int W_o, int I_o, bool S_o,          // Sortie S
+    int W_acc = 0, int I_acc = 0,        // Accumulateur (0 = automatique)
+    int W_a, int I_a, bool S_a,          // Input A   (déduit)
+    int W_m, int I_m, bool S_m,          // Matrix B  (déduit)
+    int W_c, int I_c, bool S_c           // Input C   (déduit)
 >
 vector<ac_fixed<W_o, I_o, S_o>> m_acc(
     const vector<ac_fixed<W_a, I_a, S_a>>& A,

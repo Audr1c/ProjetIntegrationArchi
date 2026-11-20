@@ -1,0 +1,219 @@
+{
+ "id": "20261119-202628",
+ "created": "2026-11-19T20:26:28",
+ "params": {
+  "k": 5,
+  "images": 1000,
+  "batch": "data_batch_1.bin",
+  "threshold": 1.0,
+  "threshold_range": null,
+  "parallel_vars": 2,
+  "order": "random",
+  "passes": 2,
+  "start_F": 12,
+  "early_stop": true,
+  "z": 2.0,
+  "min_images": 20,
+  "reorder": true,
+  "easy_frac": 0.1,
+  "easy_every": 4,
+  "runs": 30
+ },
+ "code": "c44f86cd67",
+ "seed0": 5947,
+ "runs": [
+  {
+   "seed": 5947,
+   "threshold": 1.0,
+   "run_id": "20261119-202628_k5_t1_s5947",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5948,
+   "threshold": 1.0,
+   "run_id": "20261119-212459_k5_t1_s5948",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5949,
+   "threshold": 1.0,
+   "run_id": "20261119-223144_k5_t1_s5949",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5950,
+   "threshold": 1.0,
+   "run_id": "20261119-232039_k5_t1_s5950",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5951,
+   "threshold": 1.0,
+   "run_id": "20261120-002852_k5_t1_s5951",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5952,
+   "threshold": 1.0,
+   "run_id": "20261120-012819_k5_t1_s5952",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5953,
+   "threshold": 1.0,
+   "run_id": "20261120-022107_k5_t1_s5953",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5954,
+   "threshold": 1.0,
+   "run_id": "20261120-031439_k5_t1_s5954",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5955,
+   "threshold": 1.0,
+   "run_id": "20261120-041213_k5_t1_s5955",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5956,
+   "threshold": 1.0,
+   "run_id": "20261120-050726_k5_t1_s5956",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5957,
+   "threshold": 1.0,
+   "run_id": "20261120-060846_k5_t1_s5957",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5958,
+   "threshold": 1.0,
+   "run_id": "20261120-070817_k5_t1_s5958",
+   "status": "termin\u00e9",
+   "variables": "80/80"
+  },
+  {
+   "seed": 5959,
+   "threshold": 1.0,
+   "run_id": "20261120-075856_k5_t1_s5959",
+   "status": "interrompu",
+   "variables": "0/80"
+  },
+  {
+   "seed": 5960,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5961,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5962,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5963,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5964,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5965,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5966,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5967,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5968,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5969,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5970,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5971,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5972,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5973,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5974,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5975,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  },
+  {
+   "seed": 5976,
+   "threshold": 1.0,
+   "run_id": null,
+   "status": "\u00e0 faire"
+  }
+ ]
+}

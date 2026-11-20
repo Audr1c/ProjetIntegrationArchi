@@ -1,0 +1,103 @@
+{
+ "run": "20261120-075856_k5_t1_s5959",
+ "k": 5,
+ "images": 1000,
+ "batch": "data_batch_1.bin",
+ "threshold": 1.0,
+ "seed": 5959,
+ "order": "random",
+ "passes": 2,
+ "workers": 8,
+ "parallel_vars": 2,
+ "start_F": 12,
+ "early_stop": true,
+ "z": 2.0,
+ "min_images": 20,
+ "reorder": true,
+ "easy_frac": 0.1,
+ "easy_every": 4,
+ "code": "c44f86cd67",
+ "start": {
+  "input": [
+   6,
+   12
+  ],
+  "ker1": [
+   6,
+   16
+  ],
+  "bias1": [
+   6,
+   12
+  ],
+  "acc1": [
+   8,
+   18
+  ],
+  "conv1": [
+   8,
+   12
+  ],
+  "pool1": [
+   7,
+   12
+  ],
+  "ker2": [
+   4,
+   18
+  ],
+  "bias2": [
+   6,
+   12
+  ],
+  "acc2": [
+   11,
+   18
+  ],
+  "conv2": [
+   11,
+   12
+  ],
+  "pool2": [
+   9,
+   12
+  ],
+  "ker3": [
+   5,
+   14
+  ],
+  "bias3": [
+   6,
+   12
+  ],
+  "acc3": [
+   11,
+   18
+  ],
+  "conv3": [
+   11,
+   12
+  ],
+  "pool3": [
+   9,
+   12
+  ],
+  "fck": [
+   2,
+   12
+  ],
+  "fcb": [
+   6,
+   12
+  ],
+  "accfc": [
+   10,
+   18
+  ],
+  "out": [
+   10,
+   12
+  ]
+ },
+ "date": "2026-11-20T07:58:56"
+}

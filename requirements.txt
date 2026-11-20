@@ -3,3 +3,4 @@ numpy>=1.26        # lecture des batches binaires CIFAR-10, calcul des couches
 matplotlib>=3.8    # affichage des images et des cartes de caractéristiques
 pillow>=10.0       # export d'images (PGM/PPM/PNG) pour les tests C++/HLS
 tqdm
+rich               # tableau de bord de l'exploration (Exploration/explore.py)

@@ -1,0 +1,584 @@
+{
+ "run": "20261119-185419_k5_t1_s4816",
+ "status": "termin\u00e9",
+ "k": 5,
+ "images": 1000,
+ "batch": "data_batch_1.bin",
+ "threshold": 1.0,
+ "seed": 4816,
+ "order": "random",
+ "parallel_vars": 2,
+ "workers": 8,
+ "code": "33375c5134",
+ "duration_s": 3346.2,
+ "variables_done": 128,
+ "variables_total": 128,
+ "evaluations": 776,
+ "cached": 8,
+ "stats": {
+  "evals": 776,
+  "cached": 8,
+  "stopped": 379,
+  "killed": 274,
+  "rechecks": 24,
+  "img_saved": 477066,
+  "img_total": 289934
+ },
+ "reference": {
+  "acc": 88.9,
+  "id": "536175fd56",
+  "config": {
+   "input": [
+    4,
+    12
+   ],
+   "ker1": [
+    4,
+    12
+   ],
+   "bias1": [
+    4,
+    12
+   ],
+   "conv1": [
+    7,
+    12
+   ],
+   "pool1": [
+    6,
+    12
+   ],
+   "ker2": [
+    2,
+    12
+   ],
+   "bias2": [
+    4,
+    12
+   ],
+   "conv2": [
+    10,
+    12
+   ],
+   "pool2": [
+    9,
+    12
+   ],
+   "ker3": [
+    3,
+    12
+   ],
+   "bias3": [
+    4,
+    12
+   ],
+   "conv3": [
+    10,
+    12
+   ],
+   "pool3": [
+    9,
+    12
+   ],
+   "fck": [
+    1,
+    12
+   ],
+   "fcb": [
+    4,
+    12
+   ],
+   "out": [
+    10,
+    12
+   ]
+  },
+  "bits_mem": 16.341983115790786,
+  "bits_ops": 16.128225939901537
+ },
+ "final": {
+  "acc": 87.9,
+  "config": {
+   "input": [
+    4,
+    5
+   ],
+   "ker1": [
+    3,
+    10
+   ],
+   "bias1": [
+    3,
+    7
+   ],
+   "conv1": [
+    5,
+    3
+   ],
+   "pool1": [
+    4,
+    3
+   ],
+   "ker2": [
+    1,
+    12
+   ],
+   "bias2": [
+    3,
+    0
+   ],
+   "conv2": [
+    8,
+    0
+   ],
+   "pool2": [
+    5,
+    0
+   ],
+   "ker3": [
+    2,
+    8
+   ],
+   "bias3": [
+    3,
+    2
+   ],
+   "conv3": [
+    8,
+    0
+   ],
+   "pool3": [
+    6,
+    0
+   ],
+   "fck": [
+    -1,
+    5
+   ],
+   "fcb": [
+    3,
+    2
+   ],
+   "out": [
+    6,
+    1
+   ]
+  },
+  "id": "7af49c72f1",
+  "bits_mem": 10.284695180835488,
+  "bits_ops": 10.107422553934876,
+  "kbits_mem": 1320.596
+ },
+ "path": [
+  {
+   "var": "conv3.I",
+   "value": 8,
+   "from": 10,
+   "id": "d9e6dda9b5",
+   "acc": 88.7,
+   "bits_mem": 16.3308,
+   "bits_ops": 16.128,
+   "duration_s": 44.5
+  },
+  {
+   "var": "ker1.I",
+   "value": 3,
+   "from": 4,
+   "id": "c0bd447572",
+   "acc": 88.7,
+   "bits_mem": 16.2934,
+   "bits_ops": 16.0001,
+   "duration_s": 32.3
+  },
+  {
+   "var": "out.I",
+   "value": 7,
+   "from": 10,
+   "id": "87825535ba",
+   "acc": 88.7,
+   "bits_mem": 16.2932,
+   "bits_ops": 16.0001,
+   "duration_s": 161.9
+  },
+  {
+   "var": "bias2.F",
+   "value": 1,
+   "from": 12,
+   "id": "aa7bbd536c",
+   "acc": 88.5,
+   "bits_mem": 16.2904,
+   "bits_ops": 15.9977,
+   "duration_s": 88.3
+  },
+  {
+   "var": "pool3.F",
+   "value": 0,
+   "from": 12,
+   "id": "1005998432",
+   "acc": 88.3,
+   "bits_mem": 16.2736,
+   "bits_ops": 15.9967,
+   "duration_s": 178.6
+  },
+  {
+   "var": "conv1.I",
+   "value": 6,
+   "from": 7,
+   "id": "92722211b5",
+   "acc": 88.3,
+   "bits_mem": 15.9865,
+   "bits_ops": 15.9912,
+   "duration_s": 43.6
+  },
+  {
+   "var": "pool2.I",
+   "value": 5,
+   "from": 9,
+   "id": "f4b1a50dd4",
+   "acc": 88.4,
+   "bits_mem": 15.9506,
+   "bits_ops": 15.8846,
+   "duration_s": 52.1
+  },
+  {
+   "var": "ker3.F",
+   "value": 8,
+   "from": 12,
+   "id": "7910dfd7ac",
+   "acc": 88.3,
+   "bits_mem": 15.4522,
+   "bits_ops": 15.7779,
+   "duration_s": 58.4
+  },
+  {
+   "var": "ker1.F",
+   "value": 10,
+   "from": 12,
+   "id": "0c742cf963",
+   "acc": 88.1,
+   "bits_mem": 15.3774,
+   "bits_ops": 15.5221,
+   "duration_s": 51.7
+  },
+  {
+   "var": "bias3.I",
+   "value": 3,
+   "from": 4,
+   "id": "c4a8e83dcc",
+   "acc": 88.1,
+   "bits_mem": 15.3773,
+   "bits_ops": 15.522,
+   "duration_s": 367.7
+  },
+  {
+   "var": "fcb.F",
+   "value": 2,
+   "from": 12,
+   "id": "274a198220",
+   "acc": 88.4,
+   "bits_mem": 15.3765,
+   "bits_ops": 15.522,
+   "duration_s": 76.2
+  },
+  {
+   "var": "ker2.I",
+   "value": 1,
+   "from": 2,
+   "id": "3b538e3a10",
+   "acc": 88.4,
+   "bits_mem": 14.9777,
+   "bits_ops": 15.1809,
+   "duration_s": 33.9
+  },
+  {
+   "var": "input.F",
+   "value": 5,
+   "from": 12,
+   "id": "1ea03ec564",
+   "acc": 88.1,
+   "bits_mem": 14.8835,
+   "bits_ops": 14.2853,
+   "duration_s": 72.3
+  },
+  {
+   "var": "conv1.F",
+   "value": 4,
+   "from": 12,
+   "id": "5e22eac4e9",
+   "acc": 87.9,
+   "bits_mem": 12.5868,
+   "bits_ops": 14.2409,
+   "duration_s": 74.4
+  },
+  {
+   "var": "fck.I",
+   "value": -1,
+   "from": 1,
+   "id": "a95ed71c45",
+   "acc": 87.9,
+   "bits_mem": 12.5588,
+   "bits_ops": 14.2408,
+   "duration_s": 71.1
+  },
+  {
+   "var": "bias1.F",
+   "value": 7,
+   "from": 12,
+   "id": "0e04f24323",
+   "acc": 88.4,
+   "bits_mem": 12.5563,
+   "bits_ops": 14.2322,
+   "duration_s": 80.0
+  },
+  {
+   "var": "fcb.I",
+   "value": 3,
+   "from": 4,
+   "id": "a9bf3c53fc",
+   "acc": 88.4,
+   "bits_mem": 12.5562,
+   "bits_ops": 14.2322,
+   "duration_s": 32.9
+  },
+  {
+   "var": "bias1.I",
+   "value": 3,
+   "from": 4,
+   "id": "5a80a3219e",
+   "acc": 88.4,
+   "bits_mem": 12.5557,
+   "bits_ops": 14.2305,
+   "duration_s": 33.7
+  },
+  {
+   "var": "pool1.I",
+   "value": 4,
+   "from": 6,
+   "id": "f65bf13156",
+   "acc": 88.3,
+   "bits_mem": 12.4121,
+   "bits_ops": 13.5482,
+   "duration_s": 43.2
+  },
+  {
+   "var": "pool2.F",
+   "value": 1,
+   "from": 12,
+   "id": "0fb1dd54d8",
+   "acc": 88.0,
+   "bits_mem": 12.3134,
+   "bits_ops": 13.255,
+   "duration_s": 666.5
+  },
+  {
+   "var": "pool1.F",
+   "value": 4,
+   "from": 12,
+   "id": "14aee93388",
+   "acc": 88.0,
+   "bits_mem": 11.7393,
+   "bits_ops": 10.5256,
+   "duration_s": 96.1
+  },
+  {
+   "var": "out.F",
+   "value": 6,
+   "from": 12,
+   "id": "9fd0377a04",
+   "acc": 88.0,
+   "bits_mem": 11.7388,
+   "bits_ops": 10.5256,
+   "duration_s": 156.6
+  },
+  {
+   "var": "bias2.I",
+   "value": 3,
+   "from": 4,
+   "id": "d9e91e9b75",
+   "acc": 88.0,
+   "bits_mem": 11.7385,
+   "bits_ops": 10.5254,
+   "duration_s": 82.6
+  },
+  {
+   "var": "pool3.I",
+   "value": 6,
+   "from": 9,
+   "id": "3cb5ede112",
+   "acc": 88.0,
+   "bits_mem": 11.7343,
+   "bits_ops": 10.5251,
+   "duration_s": 124.0
+  },
+  {
+   "var": "bias3.F",
+   "value": 4,
+   "from": 12,
+   "id": "589dd28c3e",
+   "acc": 87.9,
+   "bits_mem": 11.7331,
+   "bits_ops": 10.5249,
+   "duration_s": 71.9
+  },
+  {
+   "var": "conv3.F",
+   "value": 0,
+   "from": 12,
+   "id": "09c888dc32",
+   "acc": 87.9,
+   "bits_mem": 11.6658,
+   "bits_ops": 10.5236,
+   "duration_s": 255.3
+  },
+  {
+   "var": "conv2.F",
+   "value": 1,
+   "from": 12,
+   "id": "87f3fc491b",
+   "acc": 87.9,
+   "bits_mem": 11.2711,
+   "bits_ops": 10.5159,
+   "duration_s": 172.2
+  },
+  {
+   "var": "conv2.I",
+   "value": 8,
+   "from": 10,
+   "id": "611036e973",
+   "acc": 88.0,
+   "bits_mem": 11.1993,
+   "bits_ops": 10.5146,
+   "duration_s": 48.7
+  },
+  {
+   "var": "ker3.I",
+   "value": 2,
+   "from": 3,
+   "id": "384c21a1ad",
+   "acc": 88.0,
+   "bits_mem": 11.0747,
+   "bits_ops": 10.4879,
+   "duration_s": 149.1
+  },
+  {
+   "var": "out.F",
+   "value": 4,
+   "from": 6,
+   "id": "ad586b92ae",
+   "acc": 87.9,
+   "bits_mem": 11.0745,
+   "bits_ops": 10.4879,
+   "duration_s": 80.4
+  },
+  {
+   "var": "bias2.F",
+   "value": 0,
+   "from": 1,
+   "id": "9ddfc34f53",
+   "acc": 87.9,
+   "bits_mem": 11.0743,
+   "bits_ops": 10.4877,
+   "duration_s": 33.5
+  },
+  {
+   "var": "fck.F",
+   "value": 10,
+   "from": 12,
+   "id": "63eceedaf0",
+   "acc": 88.0,
+   "bits_mem": 11.0462,
+   "bits_ops": 10.4875,
+   "duration_s": 76.4
+  },
+  {
+   "var": "bias3.F",
+   "value": 2,
+   "from": 4,
+   "id": "a0789f6adc",
+   "acc": 88.1,
+   "bits_mem": 11.0459,
+   "bits_ops": 10.4874,
+   "duration_s": 49.7
+  },
+  {
+   "var": "out.F",
+   "value": 1,
+   "from": 4,
+   "id": "4f18affdde",
+   "acc": 88.1,
+   "bits_mem": 11.0457,
+   "bits_ops": 10.4874,
+   "duration_s": 59.7
+  },
+  {
+   "var": "fck.F",
+   "value": 5,
+   "from": 10,
+   "id": "98ee8f2d13",
+   "acc": 87.9,
+   "bits_mem": 10.9756,
+   "bits_ops": 10.487,
+   "duration_s": 70.3
+  },
+  {
+   "var": "out.I",
+   "value": 6,
+   "from": 7,
+   "id": "56c338e435",
+   "acc": 87.9,
+   "bits_mem": 10.9755,
+   "bits_ops": 10.487,
+   "duration_s": 45.1
+  },
+  {
+   "var": "conv2.F",
+   "value": 0,
+   "from": 1,
+   "id": "0932decc71",
+   "acc": 88.1,
+   "bits_mem": 10.9396,
+   "bits_ops": 10.4863,
+   "duration_s": 26.2
+  },
+  {
+   "var": "conv1.F",
+   "value": 3,
+   "from": 4,
+   "id": "7bca83cb54",
+   "acc": 88.2,
+   "bits_mem": 10.6525,
+   "bits_ops": 10.4808,
+   "duration_s": 37.1
+  },
+  {
+   "var": "conv1.I",
+   "value": 5,
+   "from": 6,
+   "id": "ce64798e62",
+   "acc": 87.9,
+   "bits_mem": 10.3654,
+   "bits_ops": 10.4752,
+   "duration_s": 51.4
+  },
+  {
+   "var": "pool1.F",
+   "value": 3,
+   "from": 4,
+   "id": "2bdddf63a0",
+   "acc": 87.9,
+   "bits_mem": 10.2937,
+   "bits_ops": 10.1341,
+   "duration_s": 44.6
+  },
+  {
+   "var": "pool2.F",
+   "value": 0,
+   "from": 1,
+   "id": "7af49c72f1",
+   "acc": 87.9,
+   "bits_mem": 10.2847,
+   "bits_ops": 10.1074,
+   "duration_s": 38.1
+  }
+ ]
+}
