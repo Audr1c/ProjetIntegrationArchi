@@ -11,12 +11,12 @@
  *
  * L'image est rognée au centre (24x24) puis normalisée :
  *     x' = (x - moyenne) / max(écart-type, 1/sqrt(24*24*3))
- * La sortie est rangée en [canal][ligne][colonne] (ordre de imageT).
+ * La sortie est rangée en [canal][ligne][colonne] (ordre des feature maps du modèle).
  */
 
 #include <string>
 #include <vector>
-#include "utils.hpp"
+#include "../hls/include/ac_fixed.h"
 
 using namespace std;
 
@@ -41,16 +41,11 @@ int count_images(const string& path);
 // Noms des 10 classes (batches.meta.txt)
 vector<string> load_label_names(const string& path);
 
-// Conversion vers le type ac_fixed du modèle
+// Conversion vers le tableau ac_fixed d'entrée du modèle ([3][24][24])
 template <int W, int I, bool S>
-imageT<W, I, S> to_image(const RawImage& raw) {
-    imageT<W, I, S> img;
-    img.channels = 3;
-    img.height   = CROP_SIZE;
-    img.width    = CROP_SIZE;
-    for (double v : raw.value)
-        img.value.push_back(ac_fixed<W, I, S>(v));
-    return img;
+void to_image(const RawImage& raw, ac_fixed<W, I, S>* img) {
+    for (size_t i = 0; i < raw.value.size(); i++)
+        img[i] = ac_fixed<W, I, S>(raw.value[i]);
 }
 
 #endif // READ_IMAGE_HPP

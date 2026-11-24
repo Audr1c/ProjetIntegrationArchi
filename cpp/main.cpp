@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include "config.hpp"
 #include "utils.hpp"
 #include "cnn.hpp"
@@ -26,7 +27,7 @@ static void print_format(const string& name, int W, int I, bool S) {
 /*
  * Usage : ./main [nb_images] [k_size] [batch] [--order FICHIER] [--trace]
  *     nb_images : nombre d'images à classer (0 = tout le fichier), défaut 100
- *     k_size    : noyau des convolutions, 3 ou 5, défaut 5
+ *     k_size    : noyau des convolutions, 3 ou 5, défaut 5 ; doit valoir KS (fixé à la compilation, -DKS=3)
  *     batch     : fichier CIFAR-10, défaut data_batch_1.bin
  *     --order   : fichier d'indices d'images (séparés par des espaces), évaluées dans cet ordre
  *     --trace   : une ligne par image, pour Exploration/explore.py :
@@ -53,8 +54,9 @@ int main(int argc, char** argv) {
     int    k_size    = pos.size() > 1 ? atoi(pos[1].c_str()) : 5;
     string batch     = pos.size() > 2 ? pos[2] : "data_batch_1.bin";
 
-    if (k_size != 3 && k_size != 5) {
-        cerr << "Erreur : k_size doit valoir 3 ou 5 (reçu " << k_size << ")" << endl;
+    if (k_size != KS) {
+        cerr << "Erreur : ce binaire est compilé pour un noyau " << KS << "x" << KS << " (reçu k_size = "
+             << k_size << ") : recompiler avec -DKS=" << k_size << endl;
         return 1;
     }
 
@@ -91,17 +93,22 @@ int main(int argc, char** argv) {
 
     try {
         //=== COEFFICIENTS ===//
-        map<string, Tensor> tensors = parse_tensors(coef_path);
-
-        CnnCoeffs coef;
-        coef.ker1 = to_kernel<K1_W, K1_I, true>(get_tensor(tensors, "conv1/weights", 4));
-        coef.bia1 = to_bias  <B1_W, B1_I, true>(get_tensor(tensors, "conv1/biases",  1));
-        coef.ker2 = to_kernel<K2_W, K2_I, true>(get_tensor(tensors, "conv2/weights", 4));
-        coef.bia2 = to_bias  <B2_W, B2_I, true>(get_tensor(tensors, "conv2/biases",  1));
-        coef.ker3 = to_kernel<K3_W, K3_I, true>(get_tensor(tensors, "conv3/weights", 4));
-        coef.bia3 = to_bias  <B3_W, B3_I, true>(get_tensor(tensors, "conv3/biases",  1));
-        coef.fc_k = to_matrix<FCK_W, FCK_I, true>(get_tensor(tensors, "local3/weights", 2));
-        coef.fc_b = to_vector<FCB_W, FCB_I, true>(get_tensor(tensors, "local3/biases",  1));
+        // static : 74 000 valeurs, hors de la pile
+        static ker1_t  ker1[K1_SIZE];  static bias1_t bia1[C1];
+        static ker2_t  ker2[K2_SIZE];  static bias2_t bia2[C2];
+        static ker3_t  ker3[K3_SIZE];  static bias3_t bia3[C3];
+        static fck_t   fck[FCK_SIZE];  static fcb_t   fcb[N_CLASSES];
+        {
+            map<string, Tensor> tensors = parse_tensors(coef_path);
+            to_kernel(get_tensor(tensors, "conv1/weights", 4), C1, IN_C, KS, ker1);
+            to_array (get_tensor(tensors, "conv1/biases",  1), C1, bia1);
+            to_kernel(get_tensor(tensors, "conv2/weights", 4), C2, C1, KS, ker2);
+            to_array (get_tensor(tensors, "conv2/biases",  1), C2, bia2);
+            to_kernel(get_tensor(tensors, "conv3/weights", 4), C3, C2, KS, ker3);
+            to_array (get_tensor(tensors, "conv3/biases",  1), C3, bia3);
+            to_array (get_tensor(tensors, "local3/weights", 2), FCK_SIZE, fck);
+            to_array (get_tensor(tensors, "local3/biases",  1), N_CLASSES, fcb);
+        }
 
         //=== IMAGES ===//
         int n_images = count_images(img_path);
@@ -127,18 +134,20 @@ int main(int argc, char** argv) {
         int works = 0;
         for (int n = 0; n < max_count; n++) {
             RawImage raw = load_image(img_path, order[n]);
-            imageT<IN_W, IN_I, true> image = to_image<IN_W, IN_I, true>(raw);
+            input_t image[IN_SIZE];
+            to_image(raw, image);
 
-            vector<out_t> scores = cnn(image, coef);
+            out_t scores[N_CLASSES];
+            cnn(image, ker1, bia1, ker2, bia2, ker3, bia3, fck, fcb, scores);
 
             int best = 0;
-            for (int j = 1; j < (int)scores.size(); j++)
+            for (int j = 1; j < N_CLASSES; j++)
                 if (scores[j] > scores[best]) best = j;
             if (best == raw.label) works++;
 
             if (trace) {
                 double other = -1e300;
-                for (int j = 0; j < (int)scores.size(); j++)
+                for (int j = 0; j < N_CLASSES; j++)
                     if (j != raw.label) other = max(other, scores[j].to_double());
                 double margin = scores[raw.label].to_double() - other;
                 cout << "T " << n + 1 << " " << order[n] << " " << raw.label << " " << best << " "

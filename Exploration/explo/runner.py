@@ -87,7 +87,7 @@ class Runner:
         try:
             on_stage("compilation")
             t0 = time.time()
-            cmd = [paths.CXX, *paths.CXXFLAGS, *self.defines(config), "-I", str(paths.CPP),
+            cmd = [paths.CXX, *paths.CXXFLAGS, *self.defines(config), f"-DKS={k}", "-I", str(paths.CPP),
                    str(paths.CPP / "main.cpp"), str(paths.CPP / "cnn.cpp"),
                    str(paths.BUILD / "obj" / "extract_coeff.o"), str(paths.BUILD / "obj" / "read_image.o"),
                    "-o", str(exe)]

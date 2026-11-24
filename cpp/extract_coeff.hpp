@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
-#include "utils.hpp"
+#include "../hls/include/ac_fixed.h"
 
 using namespace std;
 
@@ -38,56 +38,31 @@ const Tensor& get_tensor(const map<string, Tensor>& tensors, const string& name,
 
 
 // ============================================================
-// Conversion vers les types ac_fixed du modèle
+// Conversion vers les tableaux ac_fixed du modèle
 // ============================================================
 
-// (M, N, L, C) du fichier  ->  [C][L][M][N] (ordre de kernelT)
+// (M, N, L, C) du fichier  ->  [C][L][M][N] (ordre des noyaux de convolution_feature)
 template <int W, int I, bool S>
-kernelT<W, I, S> to_kernel(const Tensor& t) {
-    if (t.shape.size() != 4) throw runtime_error("to_kernel : tenseur 4D attendu");
-    kernelT<W, I, S> ker;
-    ker.M = t.shape[0];
-    ker.N = t.shape[1];
-    ker.L = t.shape[2];
-    ker.C = t.shape[3];
-    ker.value.resize(t.value.size());
-    for (int m = 0; m < ker.M; m++)
-        for (int n = 0; n < ker.N; n++)
-            for (int l = 0; l < ker.L; l++)
-                for (int c = 0; c < ker.C; c++)
-                    ker.value[((c * ker.L + l) * ker.M + m) * ker.N + n] =
-                        ac_fixed<W, I, S>(t.value[((m * ker.N + n) * ker.L + l) * ker.C + c]);
-    return ker;
+void to_kernel(const Tensor& t, int C_out, int C_in, int K, ac_fixed<W, I, S>* ker) {
+    if (t.shape.size() != 4 || t.shape[0] != K || t.shape[1] != K || t.shape[2] != C_in || t.shape[3] != C_out)
+        throw runtime_error("to_kernel : forme inattendue (noyau " + to_string(K) + "x" + to_string(K) +
+                            " attendu, recompiler avec -DKS=" + to_string(t.shape.size() == 4 ? t.shape[0] : 0) + " ?)");
+    for (int m = 0; m < K; m++)
+        for (int n = 0; n < K; n++)
+            for (int l = 0; l < C_in; l++)
+                for (int c = 0; c < C_out; c++)
+                    ker[((c * C_in + l) * K + m) * K + n] =
+                        ac_fixed<W, I, S>(t.value[((m * K + n) * C_in + l) * C_out + c]);
 }
 
+// Tenseur quelconque recopié dans l'ordre du fichier (biais, matrice FC ligne par ligne : value[k * N + j])
 template <int W, int I, bool S>
-biasT<W, I, S> to_bias(const Tensor& t) {
-    if (t.shape.size() != 1) throw runtime_error("to_bias : tenseur 1D attendu");
-    biasT<W, I, S> b;
-    b.C = t.shape[0];
-    for (double v : t.value)
-        b.value.push_back(ac_fixed<W, I, S>(v));
-    return b;
-}
-
-// (M, N) du fichier -> matrix2, rangée ligne par ligne : value[k * N + j]
-template <int W, int I, bool S>
-matrix2<W, I, S> to_matrix(const Tensor& t) {
-    if (t.shape.size() != 2) throw runtime_error("to_matrix : tenseur 2D attendu");
-    matrix2<W, I, S> mat;
-    mat.M = t.shape[0];
-    mat.N = t.shape[1];
-    for (double v : t.value)
-        mat.value.push_back(ac_fixed<W, I, S>(v));
-    return mat;
-}
-
-template <int W, int I, bool S>
-vector<ac_fixed<W, I, S>> to_vector(const Tensor& t) {
-    vector<ac_fixed<W, I, S>> vec;
-    for (double v : t.value)
-        vec.push_back(ac_fixed<W, I, S>(v));
-    return vec;
+void to_array(const Tensor& t, int size, ac_fixed<W, I, S>* out) {
+    if ((int)t.value.size() != size)
+        throw runtime_error("to_array : " + to_string(size) + " valeurs attendues, " +
+                            to_string(t.value.size()) + " lues");
+    for (int i = 0; i < size; i++)
+        out[i] = ac_fixed<W, I, S>(t.value[i]);
 }
 
 #endif // EXTRACT_COEFF_HPP
