@@ -6,6 +6,7 @@ import os
 import shutil
 import signal
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -22,6 +23,35 @@ from .plots import pareto, pass_stats, plot_all, plot_formats, plot_progress, pl
 from .runner import Runner
 from .search import Exploration
 from .sessions import ask_resume, find_session, new_session, save_session, show_session
+
+
+class Pool(ThreadPoolExecutor):
+    """ThreadPoolExecutor qui garde la liste de ses tâches pour pouvoir annuler celles qui
+    n'ont pas démarré : shutdown(cancel_futures=True) n'existe qu'à partir de Python 3.9."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._pending = set()
+        self._pending_lock = threading.Lock()
+
+    def submit(self, *args, **kwargs):
+        f = super().submit(*args, **kwargs)
+        with self._pending_lock:
+            self._pending.add(f)
+        f.add_done_callback(self._forget)
+        return f
+
+    def _forget(self, f):
+        with self._pending_lock:
+            self._pending.discard(f)
+
+    def cancel_pending(self):
+        """Annule les tâches en attente (celles qui tournent déjà vont au bout)."""
+        with self._pending_lock:
+            pending = list(self._pending)
+        for f in pending:
+            f.cancel()
+
 
 def cmd_run(args):
     if args.k not in (3, 5):
@@ -41,7 +71,7 @@ def cmd_run(args):
     if dash.t_runs is not None:
         dash.overall.update(dash.t_runs, completed=sum(r["status"] == "terminé" for r in sess["runs"]))
     touched, ex, t_runs, n_ran = [], None, 0.0, 0
-    pool = ThreadPoolExecutor(max_workers=2 * args.workers + 2)
+    pool = Pool(max_workers=2 * args.workers + 2)
 
     # 1er Ctrl-C : arrêt propre (on tue les calculs, la run en cours se sauvegarde et s'arrête)
     # 2e Ctrl-C  : arrêt immédiat
@@ -88,7 +118,8 @@ def cmd_run(args):
                 console.print(f"[red]sauvegarde incomplète : {e}")
     finally:
         signal.signal(signal.SIGINT, old_handler)
-        pool.shutdown(wait=True, cancel_futures=True)
+        pool.cancel_pending()
+        pool.shutdown(wait=True)
         for entry in sess["runs"]:
             if entry["status"] == "en cours":
                 entry["status"] = "interrompu"
@@ -242,7 +273,8 @@ def cmd_select(args):
 
 def main(doc=None):
     ap = argparse.ArgumentParser(description=doc or __doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub = ap.add_subparsers(dest="cmd")
+    sub.required = True             # add_subparsers(required=...) n'existe qu'à partir de Python 3.7
 
     r = sub.add_parser("run", help="lance une ou plusieurs explorations")
     r.add_argument("--k", type=int, default=5, help="noyau des convolutions : 3 ou 5 (défaut 5)")

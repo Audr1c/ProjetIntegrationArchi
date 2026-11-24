@@ -392,7 +392,8 @@ class Exploration:
             self.config = start_config(a.start_F)
             self.start = {n: list(v) for n, v in self.config.items()}
             for f in ("history.jsonl", "summary.json"):         # run interrompu avant la référence
-                (self.dir / f).unlink(missing_ok=True)
+                if (self.dir / f).exists():                     # pas de missing_ok en Python < 3.8
+                    (self.dir / f).unlink()
         params = {"run": self.run_id, "k": self.k, "images": self.n, "batch": self.batch,
                   "threshold": self.threshold, "seed": self.seed, "order": a.order,
                   "passes": a.passes, "workers": self.workers, "parallel_vars": a.parallel_vars,

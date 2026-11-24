@@ -16,6 +16,17 @@ from .formats import unpack
 # Les figures sont des objets Figure (backend Agg) : pas de pyplot, pas de Tk,
 # rien de global à fermer -> pas de crash depuis un thread ni de figure oubliée en mémoire.
 
+
+def tab10():
+    """Palette « tab10 ». matplotlib.colormaps n'existe qu'à partir de matplotlib 3.5 (Python 3.6
+    plafonne à 3.3.4), et cm.get_cmap a été retiré en 3.9 : on essaie l'un puis l'autre."""
+    try:
+        return matplotlib.colormaps["tab10"]
+    except AttributeError:
+        from matplotlib import cm
+        return cm.get_cmap("tab10")
+
+
 # ============================================================
 # Graphes
 # ============================================================
@@ -199,7 +210,7 @@ def plot_all(k, n, metric, show_all_codes=False, zoom=False):
     ax.step([p[key] for p in front], [p["acc"] for p in front], where="post", c="k", lw=1.2,
             label="front de Pareto")
     ax.scatter([p[key] for p in front], [p["acc"] for p in front], s=18, c="k", zorder=3)
-    cmap = matplotlib.colormaps["tab10"]
+    cmap = tab10()
     for i, s in enumerate(load_runs(k=k, n=n)):
         f = s["final"]
         ax.scatter([f[key]], [f["acc"]], s=160, marker="*", color=cmap(i % 10), edgecolors="k", zorder=5,
@@ -342,7 +353,7 @@ def plot_progress_all(k, n):
         return None
     fig = Figure(figsize=(12, 6.5))
     ax = fig.subplots()
-    cmap = matplotlib.colormaps["tab10"]
+    cmap = tab10()
     for i, s in enumerate(runs):
         evs, kept = run_timeline(paths.RUNS / s["run"])
         if not evs:

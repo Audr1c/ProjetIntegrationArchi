@@ -16,6 +16,10 @@ from .formats import FMT, NAMES, width
 RE_TRACE = re.compile(r"^T (\d+) (\d+) (\d+) (\d+) (\S+)")
 RE_FINAL = re.compile(r"Got an accuracy of ([\d.]+)% \((\d+)/(\d+)\)")
 
+# Sorties capturées en texte. Équivaut à capture_output=True, text=True, écrit pour Python 3.6
+# (ces deux arguments n'existent qu'à partir de 3.7 ; la machine de l'école est en 3.6.8).
+CAPTURE = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+
 
 class Runner:
     """Compile une configuration (-D...) et lance cpp/main dessus en mode --trace."""
@@ -36,7 +40,7 @@ class Runner:
             if obj.exists() and obj.stat().st_mtime >= newest:
                 continue
             r = subprocess.run([paths.CXX, *paths.CXXFLAGS, "-c", str(paths.CPP / src), "-o", str(obj)],
-                               capture_output=True, text=True)
+                               **CAPTURE)
             if r.returncode:
                 sys.exit(f"Échec de compilation de {src} :\n{r.stderr}")
 
@@ -92,7 +96,7 @@ class Runner:
                    str(paths.BUILD / "obj" / "extract_coeff.o"), str(paths.BUILD / "obj" / "read_image.o"),
                    "-o", str(exe)]
             # start_new_session : le Ctrl-C du terminal ne tue pas les enfants, c'est nous qui les arrêtons
-            r = subprocess.run(cmd, capture_output=True, text=True, start_new_session=True)
+            r = subprocess.run(cmd, **CAPTURE, start_new_session=True)
             t_compile = time.time() - t0
             if r.returncode:
                 return {"error": "compilation : " + r.stderr[-1500:]}
@@ -104,8 +108,7 @@ class Runner:
             args = [str(exe), str(n), str(k), batch, "--trace"]
             if order_file:
                 args += ["--order", str(order_file)]
-            p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                 text=True, bufsize=1, start_new_session=True)
+            p = subprocess.Popen(args, **CAPTURE, bufsize=1, start_new_session=True)
             with self.lock:
                 self.procs[pid] = p
             trace, final, stopped = [], None, False
@@ -137,4 +140,7 @@ class Runner:
             return {"trace": trace, "acc": float(final.group(1)), "correct": int(final.group(2)),
                     "n": int(final.group(3)), **timing}
         finally:
-            exe.unlink(missing_ok=True)
+            try:                    # unlink(missing_ok=True) n'existe qu'à partir de Python 3.8
+                exe.unlink()
+            except FileNotFoundError:
+                pass
