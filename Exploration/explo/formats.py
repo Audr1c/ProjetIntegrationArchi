@@ -153,7 +153,7 @@ def make_config_hpp(config, origin):
            " *",
            " * Toutes les valeurs se modifient ici, ou à la compilation sans toucher au code :",
            ' *     cmake -DCMAKE_CXX_FLAGS="-DCONV1_W=12 -DCONV1_I=6" ..',
-           " */", "", '#include "../hls/include/ac_fixed.h"', ""]
+           " */", "", "#include <ac_fixed.h>", ""]
     for n in [n for n in NAMES if n in config]:
         _, macro, _, _, _, _, desc = FMT[n]
         out.append(f"// {desc}")

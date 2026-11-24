@@ -12,7 +12,9 @@
  * Dynamiques mesurées en Python : voir Results/amplitude_*.md
  */
 
-#include "../hls/include/ac_fixed.h"
+// AC datatypes : sous Catapult, la version de l'outil ($MGC_HOME/shared/include) ;
+// hors Catapult, la copie hls/include/ (-I ajouté par CMake et Exploration/). Voir hls/AUDIT_HLS.md C-04.
+#include <ac_fixed.h>
 
 // ---------------- Image d'entrée (normalisée, max mesuré 3.5) ----------------
 #ifndef IN_W

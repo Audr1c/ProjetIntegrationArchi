@@ -171,12 +171,11 @@ class Store:
 # Évaluation
 # ============================================================
 
-def compile_fixed(cfg, tag):
+def compile_fixed(cfg, tag, k):
     exe = paths.BUILD / "bin" / f"validate_{tag}"
     d = [f'-DPROJECT_ROOT="{paths.ROOT}"'] + [f"-D{m}={v}" for m, v in cfg["macros"].items()]
-    cmd = [paths.CXX, *paths.CXXFLAGS, *d, "-I", str(paths.CPP), str(paths.CPP / "main.cpp"),
-           str(paths.CPP / "cnn.cpp"), str(paths.BUILD / "obj" / "extract_coeff.o"),
-           str(paths.BUILD / "obj" / "read_image.o"), "-o", str(exe)]
+    cmd = [paths.CXX, *paths.CXXFLAGS, *paths.INCLUDES, *d, f"-DKS={k}", "-I", str(paths.CPP), str(paths.CPP / "main.cpp"),
+           str(paths.CPP / "cnn.cpp"), str(paths.BUILD / "obj" / "read_image.o"), "-o", str(exe)]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode:
         sys.exit(f"Échec de compilation de {cfg['label']} :\n{r.stderr[-2000:]}")
@@ -366,7 +365,7 @@ def main():
                     else:
                         if exe is None:
                             progress.update(task, description=f"{c['label']:>16} compilation…")
-                            exe = compile_fixed(c, key)
+                            exe = compile_fixed(c, key, a.k)
                             progress.update(task, description=f"{c['label']:>16} {b:<18}")
                         res = run_fixed(exe, a.k, b, list(range(s, s + n)), a.jobs, progress, task)
                         ok = [res[i] for i in range(s, s + n)]

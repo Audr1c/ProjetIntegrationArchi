@@ -34,7 +34,7 @@ REQUIRED  := data/cifar-10-batches-bin/data_batch_1.bin \
              hls/include/ac_fixed.h
 
 .DEFAULT_GOAL := help
-.PHONY: help init tree tree-check venv check run explore validate efficiency clean distclean
+.PHONY: help init tree tree-check venv check run explore validate efficiency coeffs nonreg tb-hls clean distclean
 
 help: ## Affiche cette aide
 	@echo "Commandes disponibles :"
@@ -102,6 +102,29 @@ validate: venv ## Teste des configs sur plus d'images (ARGS="<run> <run>:ref flo
 
 efficiency: venv ## Efficacité des pas des runs passés (bits gagnés × poids / précision perdue)
 	MPLCONFIGDIR="$${MPLCONFIGDIR:-$${TMPDIR:-/tmp}}" "$(CURDIR)/$(PY)" Exploration/efficiency.py $(ARGS)
+
+# ---------------- HLS (hls/AUDIT_HLS.md) ----------------
+
+coeffs: venv ## Regénère les ROM cpp/coeffs_k3.hpp et coeffs_k5.hpp depuis data/coef/
+	"$(CURDIR)/$(PY)" hls/gen_coeffs.py
+
+nonreg: ## Non-régression bit-exacte : scores de 200 images (k=5) vs hls/ref/scores_k5.txt
+	@cmake -S cpp -B cpp/build >/dev/null && cmake --build cpp/build -j >/dev/null
+	@mkdir -p build
+	@cpp/build/main 200 5 data_batch_1.bin --dump build/scores_k5.txt >/dev/null
+	@if cmp -s build/scores_k5.txt hls/ref/scores_k5.txt; then \
+	    echo "OK : scores identiques à hls/ref/scores_k5.txt (200 images)"; \
+	elif [ "$$(head -1 build/scores_k5.txt)" != "$$(head -1 hls/ref/scores_k5.txt)" ]; then \
+	    echo "Formats de cpp/config.hpp différents de ceux de la référence : comparaison impossible"; \
+	    echo "  (nouvelle référence : cpp/build/main 200 5 data_batch_1.bin --dump hls/ref/scores_k5.txt)"; exit 1; \
+	else \
+	    echo "ÉCHEC : scores différents de hls/ref/scores_k5.txt"; \
+	    diff build/scores_k5.txt hls/ref/scores_k5.txt | head -6; exit 1; \
+	fi
+
+tb-hls: ## Testbench HLS sans Catapult (ARGS=nb_images, défaut 3)
+	@cmake -S cpp -B cpp/build >/dev/null && cmake --build cpp/build -j >/dev/null
+	cpp/build/tb_hls $(ARGS)
 
 clean: ## Supprime les caches et build/
 	rm -rf $(SRC_DIR)/__pycache__ build/*

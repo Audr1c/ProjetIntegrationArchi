@@ -35,7 +35,7 @@ class Runner:
             obj = paths.BUILD / "obj" / src.replace(".cpp", ".o")
             if obj.exists() and obj.stat().st_mtime >= newest:
                 continue
-            r = subprocess.run([paths.CXX, *paths.CXXFLAGS, "-c", str(paths.CPP / src), "-o", str(obj)],
+            r = subprocess.run([paths.CXX, *paths.CXXFLAGS, *paths.INCLUDES, "-c", str(paths.CPP / src), "-o", str(obj)],
                                capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"Échec de compilation de {src} :\n{r.stderr}")
@@ -87,7 +87,7 @@ class Runner:
         try:
             on_stage("compilation")
             t0 = time.time()
-            cmd = [paths.CXX, *paths.CXXFLAGS, *self.defines(config), f"-DKS={k}", "-I", str(paths.CPP),
+            cmd = [paths.CXX, *paths.CXXFLAGS, *paths.INCLUDES, *self.defines(config), f"-DKS={k}", "-I", str(paths.CPP),
                    str(paths.CPP / "main.cpp"), str(paths.CPP / "cnn.cpp"),
                    str(paths.BUILD / "obj" / "read_image.o"),
                    "-o", str(exe)]

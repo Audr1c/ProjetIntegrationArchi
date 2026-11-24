@@ -7,6 +7,7 @@
 #include "utils.hpp"
 #include "cnn.hpp"
 #include "read_image.hpp"
+#include "tb_common.hpp"
 
 using namespace std;
 
@@ -23,7 +24,7 @@ static void print_format(const string& name, int W, int I, bool S) {
 
 
 /*
- * Usage : ./main [nb_images] [k_size] [batch] [--order FICHIER] [--trace]
+ * Usage : ./main [nb_images] [k_size] [batch] [--order FICHIER] [--trace] [--dump FICHIER]
  *     nb_images : nombre d'images à classer (0 = tout le fichier), défaut 100
  *     k_size    : noyau des convolutions, 3 ou 5, défaut 5 ; doit valoir KS (fixé à la compilation, -DKS=3)
  *     batch     : fichier CIFAR-10, défaut data_batch_1.bin
@@ -31,6 +32,8 @@ static void print_format(const string& name, int W, int I, bool S) {
  *     --trace   : une ligne par image, pour Exploration/explore.py :
  *                 "T <rang> <indice> <label> <prédiction> <marge>"
  *                 marge = score(label) - meilleur score des autres classes (< 0 si erreur)
+ *     --dump    : écrit les 10 scores exacts de chaque image dans FICHIER (format de cpp/tb_common.hpp),
+ *                 pour la non-régression bit-exacte (make nonreg) et le testbench HLS (hls/ref/)
  *
  * Max-pool fixé à 3x3, pas de 2. Formats virgule fixe : config.hpp
  * Coefficients compilés dans le binaire (ROM cpp/coeffs_k3.hpp / coeffs_k5.hpp, hls/gen_coeffs.py)
@@ -40,12 +43,13 @@ int main(int argc, char** argv) {
     cout << "=== MAIN CPP PROGRAM ===" << endl;
 
     vector<string> pos;
-    string order_file;
+    string order_file, dump_file;
     bool trace = false;
     for (int a = 1; a < argc; a++) {
         string s = argv[a];
         if (s == "--order" && a + 1 < argc) order_file = argv[++a];
         else if (s == "--trace")            trace = true;
+        else if (s == "--dump" && a + 1 < argc) dump_file = argv[++a];
         else                                pos.push_back(s);
     }
 
@@ -111,6 +115,13 @@ int main(int argc, char** argv) {
         cout << "Noyau " << k_size << "x" << k_size << ", max-pool 3x3, "
              << max_count << " images de " << batch << endl;
 
+        ofstream dump;
+        if (!dump_file.empty()) {
+            dump.open(dump_file);
+            if (!dump) throw runtime_error("impossible d'écrire " + dump_file);
+            dump << format_signature() << "\n";
+        }
+
         int works = 0;
         for (int n = 0; n < max_count; n++) {
             RawImage raw = load_image(img_path, order[n]);
@@ -119,6 +130,7 @@ int main(int argc, char** argv) {
 
             out_t scores[N_CLASSES];
             cnn(image, scores);
+            if (!dump_file.empty()) dump << score_line(order[n], scores) << "\n";
 
             int best = 0;
             for (int j = 1; j < N_CLASSES; j++)

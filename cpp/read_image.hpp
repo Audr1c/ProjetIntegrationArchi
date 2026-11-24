@@ -16,7 +16,7 @@
 
 #include <string>
 #include <vector>
-#include "../hls/include/ac_fixed.h"
+#include <ac_fixed.h>
 
 using namespace std;
 

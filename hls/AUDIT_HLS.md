@@ -43,15 +43,15 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 | B-05 | 🟠 | interface du top | Tableaux d'interface sans taille déclarée (`-ARRAY_SIZE 1024` par défaut) | ✅ fait (commit A) |
 | B-06 | 🟠 | `cnn.cpp` | Grandes mémoires intermédiaires (36 864 mots pour conv1) : bibliothèque RAM et budget BRAM | ⏸ reporté |
 | B-07 | 🟠 | `read_image.cpp` | Crop + normalisation en `double` dans le testbench : la frontière HW/SW de l'entrée n'est pas définie | ✅ décidé : hors matériel |
-| C-01 | 🔴 | `main.cpp` | Pas de testbench SCVerify (`CCS_MAIN` / `CCS_DESIGN` / `CCS_RETURN`) | À faire |
-| C-02 | 🟠 | script Tcl | Fichiers du testbench à exclure de la synthèse (`-exclude true`) | À faire |
-| C-03 | 🟠 | `hls/` | Pas de script Tcl CNN, et la cible de la démo est un Artix-7 au lieu du Zynq-7000 | À faire |
-| C-04 | 🟠 | `config.hpp:15`, `utils.hpp:6` | Include de la copie locale `../hls/include/ac_fixed.h` (v4.0) au lieu de celle de Catapult | À faire |
+| C-01 | 🔴 | `main.cpp` | Pas de testbench SCVerify (`CCS_MAIN` / `CCS_DESIGN` / `CCS_RETURN`) | ✅ fait (commit C) |
+| C-02 | 🟠 | script Tcl | Fichiers du testbench à exclure de la synthèse (`-exclude true`) | ✅ fait (commit C) |
+| C-03 | 🟠 | `hls/` | Pas de script Tcl CNN, et la cible de la démo est un Artix-7 au lieu du Zynq-7000 | 🔶 fait (commit C), nom de bibliothèque Zynq à vérifier |
+| C-04 | 🟠 | `config.hpp:15`, `utils.hpp:6` | Include de la copie locale `../hls/include/ac_fixed.h` (v4.0) au lieu de celle de Catapult | ✅ fait (commit C) |
 | C-05 | 🟡 | `utils.hpp:5,8`, `cnn.hpp:4,8` | `<vector>` et `using namespace std` dans les en-têtes du design | ✅ fait (commit A) |
-| C-06 | 🟠 | — | Aucune vérification bit-exacte entre l'ancien et le nouveau modèle | 🔶 faite hors dépôt (A et B), outil à intégrer |
-| C-07 | 🟠 | testbench | Simulation RTL de ~10,7 M MAC/image : impossible sur 1000 images | À faire |
-| C-08 | 🟠 | `main.cpp:14-16` | `PROJECT_ROOT` vaut `".."` hors CMake : chemins faux dans le dossier de SCVerify | À faire |
-| C-09 | 🟠 | `CMakeLists.txt`, `Exploration/explo/runner.py` | Nouveaux fichiers et `-DKS`, cache d'exploration invalidé | ✅ fait (commits A/B) |
+| C-06 | 🟠 | — | Aucune vérification bit-exacte entre l'ancien et le nouveau modèle | ✅ fait (commit C) : `--dump`, `hls/ref/`, `make nonreg` |
+| C-07 | 🟠 | testbench | Simulation RTL de ~10,7 M MAC/image : impossible sur 1000 images | ✅ fait (commit C) |
+| C-08 | 🟠 | `main.cpp:14-16` | `PROJECT_ROOT` vaut `".."` hors CMake : chemins faux dans le dossier de SCVerify | ✅ fait (commit C) |
+| C-09 | 🟠 | `CMakeLists.txt`, `Exploration/explo/runner.py` | Nouveaux fichiers et `-DKS`, cache d'exploration invalidé | ✅ fait (commits A/B/C) |
 | D-01 | 🟠 | `config.hpp` | Config actuelle = 16 bits « large » + accumulateurs auto (~40 bits) | ✅ décidé : large pour l'instant |
 | D-02 | 🟡 | `utils.cpp:13-19`, `cnn.cpp` | ReLU = passe complète en plus sur chaque feature map | Après A/B |
 | D-03 | 🟡 | `utils.cpp:33-37` | Test de padding (6 comparaisons) à chaque MAC, dont un test de canal inutile | Après A/B |
@@ -169,10 +169,12 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 - **Constat** : `main.cpp` appelle `cnn()` directement et définit `int main`.
 - **Règle / modèle** : `FIR_TESTBENCH.cpp` inclut `mc_scverify.h`, définit `CCS_MAIN(int argc, char **argv)`, appelle `CCS_DESIGN(FIR_HARDWARE)(…)` et se termine par `CCS_RETURN(0)` [FIR]. C'est ce qui permet à SCVerify de rejouer le testbench sur le RTL [UR §15].
 - **Correction** : nouveau fichier `cpp/tb_hls.cpp` (ou `hls/cnn/tb_hls.cpp`). `main.cpp` reste l'outil PC et d'exploration, compilable sans Catapult : `mc_scverify.h` n'existe que dans l'installation de Catapult.
+- **État (commit C)** : [hls/tb_hls.cpp](tb_hls.cpp). Il lit N images, appelle `CCS_DESIGN(cnn)`, affiche les scores et compare à `hls/ref/`. Il renvoie 1 en cas d'écart. Sur PC, [hls/stub/mc_scverify.h](stub/mc_scverify.h) remplace l'en-tête de Catapult (`make tb-hls`) ; sous Catapult, c'est le vrai fichier qui est utilisé.
 
 ### C-02 🟠 Fichiers à exclure de la synthèse
 - **Constat** : `extract_coeff.cpp`, `read_image.cpp` et le testbench utilisent `map`, `string` et `fstream`. Dans `demoFir.tcl`, `FIR_SIMPLE_REFERENCE.cpp` est ajouté **sans** `-exclude` : ça passe seulement parce que le top ne l'appelle pas.
 - **Correction** : `solution file add … -type C++ -exclude true` pour tout ce qui n'est pas le design, comme dans `demo_sim.tcl`.
+- **État (commit C)** : dans [hls/cnn.tcl](cnn.tcl), `tb_hls.cpp`, `read_image.*` et `tb_common.hpp` sont en `-exclude true`. Les en-têtes du design sont ajoutés en `CHEADER`, y compris `utils.cpp` (templates inclus par `utils.hpp`) et `coeffs_k$KS.hpp`.
 
 ### C-03 🟠 Script Tcl du CNN à écrire, cible à changer
 - **Constat** : il n'existe que `demoFir.tcl` et `demo_sim.tcl`, qui ciblent un **Artix-7** (`xc7a12tcsg325-2L` / `xc7a50tcsg324-2`). La Zybo Z7 est un **Zynq-7000** (`xc7z010clg400-1` ou `xc7z020clg400-1`).
@@ -196,16 +198,21 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
   go extract
   ```
   Le nom exact de la bibliothèque Zynq dans Catapult n'est pas vérifié ici : recopier celui que la GUI écrit dans le log.
+- **État (commit C)** : [hls/cnn.tcl](cnn.tcl) est fait. Analyse, compilation, bibliothèques (`Xilinx_RAMS` et `Xilinx_ROMS` comme dans la démo), horloge 100 MHz, start/ready/done, `go extract`, puis SCVerify en C++ seul et en RTL VHDL sous Questa. Paramètres en tête : `KS`, `TB_IMAGES`, `CLOCK_NS`, `FPGA_LIB`, `FPGA_OPTS`.
+- **À vérifier sur place** : le nom `mgc_Xilinx-ZYNQ-1_beh` et les options `-family ZYNQ …` sont **supposés**, d'après la forme `mgc_Xilinx-ARTIX-7-2_beh` de la démo ; aucune source locale ne les donne. En cas d'erreur, le script s'arrête avec un message. Il faut alors choisir la bibliothèque dans *Task Bar → Libraries* et recopier la commande du log. Choisir aussi la puce selon la carte : `xc7z010` (Z7-10) ou `xc7z020` (Z7-20).
+- **Chemin sans espace** : les Makefiles de SCVerify gèrent mal les espaces. Il faut cloner le dépôt dans un chemin qui n'en contient pas, contrairement au chemin local « S9 SEI ».
 
 ### C-04 🟠 Include de la copie locale des AC types
 - **Constat** : `#include "../hls/include/ac_fixed.h"` (`config.hpp:15`, `utils.hpp:6`). Cette copie est la version 4.0, alors que Catapult fournit la sienne dans `$MGC_HOME/shared/include`. Les deux utilisent la même garde `__AC_FIXED_H` : la première incluse gagne, et `mc_scverify.h` / `ac_channel.h` de Catapult tourneraient alors avec notre version.
 - **Règle** : « Catapult automatically includes the source location ($MGC_HOME/shared/includes) in the include search path » [UR §AC datatypes]. [FIR] fait `#include "ac_fixed.h"` et `Demo_FIR/C/Makefile` ajoute `-I…/Mgc_home/shared/include`.
 - **Correction** : `#include <ac_fixed.h>` partout, avec `-I hls/include` dans `CMakeLists.txt` (`target_include_directories`) et dans `Exploration/explo/paths.py` (`CXXFLAGS`).
+- **État (commit C)** : `config.hpp`, `utils.hpp` et `read_image.hpp` font `#include <ac_fixed.h>`. Sur PC, `-I hls/include` est ajouté par `CMakeLists.txt` et par `Exploration/explo/paths.py:INCLUDES`, à part de `CXXFLAGS` pour ne pas mettre un chemin absolu dans le hash du cache. `make_config_hpp` écrit le même include. Le script `cnn.tcl` n'ajoute **pas** `hls/include` : Catapult utilise sa propre version.
 
 ### C-05 🟡 STL et `using namespace std` dans les en-têtes du design
 - **Constat** : `utils.hpp` et `cnn.hpp` incluent `<vector>` et font `using namespace std;`. Ils sont inclus par le design.
 - **Règle** : la STL dans le design « requires many special define statements and will result in different hardware on different platforms » [UR §6].
 - **Correction** : les en-têtes du design n'incluent que `<ac_fixed.h>` et `config.hpp`. `<vector>`, `<string>` et `using namespace std` restent dans les fichiers du testbench.
+- **État** : fait au commit A. Les en-têtes du design n'incluent plus ni `<vector>` ni `using namespace std`.
 
 ### C-06 🟠 Pas de vérification bit-exacte ancien → nouveau modèle
 - **Constat** : la réécriture touche toute la chaîne de calcul. Une erreur d'indice (CHW/HWC, `[C][L][M][N]`) coûterait des points sans planter.
@@ -214,20 +221,24 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
   En plus, sous `-D__SYNTHESIS__`, la variante ROM `ac_fixed` donne les mêmes scores. Programmes de dump
   temporaires, non versionnés : l'option `--dump` reste à ajouter.
 - **Correction** : **avant** la réécriture, produire une référence avec l'ancien modèle : les 10 scores de N=200 images dans un fichier (option `--dump` dans `main.cpp`). Après, comparer **à l'identique** (`==` sur les `ac_fixed`, pas seulement la précision). Garder les mêmes ordres d'accumulation pour que ce soit possible (voir B-04 et D-02). Le testbench SCVerify relit ce même fichier.
+- **État (commit C)** : `main --dump FICHIER` écrit une ligne de signature des formats (`# formats KS=5 in=16,4 …`), puis les 10 scores exacts de chaque image ([cpp/tb_common.hpp](../cpp/tb_common.hpp)). `hls/ref/scores_k5.txt` et `scores_k3.txt` (200 images, config large) sont identiques au bit près à l'ancien modèle `dd12d0b`. `make nonreg` recompile, régénère le fichier et le compare. Si les formats ont changé, il le signale au lieu de conclure à une régression.
 
 ### C-07 🟠 Durée de la simulation RTL
 - **Constat** : 10,7 M MAC par image (voir D-06). En RTL sous Questa, c'est de l'ordre de la minute par image au moins.
 - **Correction** : `tb_hls.cpp` prend un **petit** nombre d'images (1 à 5), choisies parmi celles de C-06. Il compare les scores RTL aux scores de référence et non aux labels.
+- **État (commit C)** : le testbench simule 3 images par défaut (`CNN_TB_N` ou argument), et `cnn.tcl` en demande 2. La comparaison se fait aux scores de référence, pas aux labels. En plus, SCVerify compare lui-même le RTL au C++.
 
 ### C-08 🟠 Chemins de données dans le dossier de SCVerify
 - **Constat** : `PROJECT_ROOT` vient de CMake et vaut `".."` par défaut (`main.cpp:14-16`). SCVerify lance la simulation depuis le dossier du projet Catapult : dans [FIR], `input_signal.txt` est écrit dans `Demo_FIR/HLS/`.
 - **Correction** : dans `tb_hls.cpp`, chemin absolu passé par variable d'environnement (`CNN_ROOT`) ou en argument, avec un message d'erreur explicite si le fichier est introuvable.
+- **État (commit C)** : la racine du dépôt est lue dans la variable d'environnement `CNN_ROOT`, positionnée par `cnn.tcl` (`set ::env(CNN_ROOT)`), sinon dans `PROJECT_ROOT` (CMake). Si aucune n'est définie, le testbench s'arrête avec un message explicite.
 
 ### C-09 🟠 Impact sur CMake et sur l'exploration
 - **Constat** : `runner.py` compile une liste de fichiers codée en dur (`main.cpp`, `cnn.cpp`, objets `extract_coeff.o`, `read_image.o`) et passe k à l'exécution. Le cache est indexé par le hash de tous les `cpp/*.?pp` sauf `config.hpp`.
 - **État** : fait. `runner.py` passe `-DKS=<k>` et ne compile plus que `read_image.o`. `extract_coeff.*` a été supprimé
   (la lecture du fichier est remplacée par les ROM), et `CMakeLists.txt` est à jour.
 - **Correction prévue** : ajouter `-DKS=<k>` dans `Runner.defines()`, ajouter les nouveaux fichiers dans `CMakeLists.txt` et `runner.py`, et supprimer `extract_coeff.o` si `main.cpp` ne lit plus les coefficients. Le cache sera invalidé, ce qui est **normal** : si C-06 est bit-exact, les anciens résultats restent valables, mais le hash ne le sait pas.
+- **Correction ajoutée (commit C)** : `Exploration/validate.py` était cassé depuis les commits A et B. Il linkait `extract_coeff.o` et ne passait pas `-DKS`. Corrigé, et testé pour k=5 et k=3.
 
 ---
 
@@ -364,13 +375,13 @@ void cnn(const input_t image[C0*IMG_H*IMG_W], out_t scores[N_CLASSES]) {
 ## Plan de migration (ordre conseillé)
 
 1. [x] **Commit de l'état actuel** (pragma A-01 inclus). Pas de tag : l'état d'avant est le commit `dd12d0b`.
-2. [~] **C-06** (référence faite hors dépôt) : ajouter `--dump` à `main.cpp` et produire `hls/ref/scores_k5_200.txt` avec l'**ancien** modèle.
+2. [x] **C-06** : ajouter `--dump` à `main.cpp` et produire `hls/ref/scores_k5_200.txt` avec l'**ancien** modèle.
 3. [x] **B-02** : écrire `hls/gen_coeffs.py`, générer `cpp/coeffs_k5.hpp` et `cpp/coeffs_k3.hpp`.
 4. [x] **A-02 → A-05, B-01, B-03, B-04** (D-02, D-05, D-07 restent à faire) : réécrire `utils.*` et `cnn.*` en tableaux fixes (squelette ci-dessus).
-5. [ ] **C-04** : includes `<ac_fixed.h>` + `-I hls/include` (C-05 fait au commit A).
+5. [x] **C-04** : includes `<ac_fixed.h>` + `-I hls/include` (C-05 fait au commit A).
 6. [x] **C-09** : adapter `main.cpp` (coefficients compilés, `KS`), `CMakeLists.txt` et `runner.py` (`-DKS`).
 7. [x] **Non-régression** : scores identiques sur les 200 images de l'étape 2, et précision inchangée sur 1000 images (`cpp/build/main 1000 5`).
-8. [ ] **C-01, C-07, C-08** : écrire `tb_hls.cpp` (1 à 5 images, comparaison aux scores de référence).
-9. [ ] **C-02, C-03, B-05, B-06** : écrire `hls/cnn.tcl`, puis `go analyze` / `go compile` sur la machine de l'école.
+8. [x] **C-01, C-07, C-08** : écrire `tb_hls.cpp` (1 à 5 images, comparaison aux scores de référence).
+9. [~] **C-02, C-03** : `hls/cnn.tcl` écrit. **Reste** : le lancer à l'école (`go analyze` → `go extract`), vérifier le nom de la bibliothèque Zynq, puis B-06.
 10. [ ] `go extract` et SCVerify (B-07 et D-01 décidés le 2026-11-24 : entrée normalisée, config large).
 11. [ ] **D-03, D-04, D-06, D-08** : optimisations selon les rapports de Catapult (surface, latence, BRAM).

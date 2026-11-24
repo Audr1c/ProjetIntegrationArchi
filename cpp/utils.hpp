@@ -1,7 +1,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include "../hls/include/ac_fixed.h"
+#include <ac_fixed.h>          // voir config.hpp (C-04)
 
 /*
  * Briques du CNN, écrites pour être synthétisables par Catapult (voir hls/AUDIT_HLS.md) :

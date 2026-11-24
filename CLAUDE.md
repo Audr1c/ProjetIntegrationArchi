@@ -15,7 +15,7 @@ Langue du projet : **français** (commentaires, messages, docstrings, commits, d
 | 1. Référence Python | `python/` : CNN boucles + version numpy vectorisée, lecture CIFAR/coefs, mesure de dynamique | ✅ fini |
 | 2a. C++ virgule fixe | `cpp/` : même réseau en `ac_fixed<W,I,S>`, formats dans `cpp/config.hpp` | ✅ fini, ~89 % sur 200 img |
 | 2b. Exploration des formats | `Exploration/` : recherche auto du nb de bits minimal par format | ✅ 12 runs complets (+2 anciens), **non commité** (`?? Exploration/`) |
-| 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A-01…D-08) ; code C++ rendu synthétisable (étapes A et B, bit-exact) | 🔄 en cours : reste C (testbench SCVerify, Tcl) et D |
+| 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A-01…D-08) : A, B, C faits (code synthétisable bit-exact, testbench SCVerify, `hls/cnn.tcl`) | 🔄 à lancer sous Catapult à l'école, puis D |
 | 3. FPGA Vivado / Zybo Z7 | `fpga/` vide | ⏳ pas commencé |
 | Rapport | `rapport/` vide | ⏳ pas commencé |
 
@@ -59,7 +59,8 @@ cpp/               modèle C++ virgule fixe ; partie synthétisable (cnn.cpp, ut
   cnn.hpp/.cpp     KS (taille noyau, -DKS=3) + dimensions ; top Catapult cnn(input_t image[1728], out_t scores[10])
   coeffs_k3/k5.hpp ROM des coefficients, GÉNÉRÉES par hls/gen_coeffs.py, incluses DANS cnn() (macros CNN_ROM_*)
   read_image.*     load_image(path, n) → RawImage (double, CHW, crop+normalize), to_image(raw, tableau)
-  main.cpp         CLI : ./main [nb_images=100] [k=5] [batch=data_batch_1.bin] [--order F] [--trace] ; k doit valoir KS
+  main.cpp         CLI : ./main [nb_images=100] [k=5] [batch=data_batch_1.bin] [--order F] [--trace] [--dump F] ; k = KS
+  tb_common.hpp    testbench seulement : signature des formats, écriture/lecture des scores de référence
   CMakeLists.txt   cible `main`, Release par défaut, définit PROJECT_ROOT
 Exploration/       outil d'exploration bits/précision (Python + rich), voir plus bas
   explore.py       point d'entrée (docstring = doc complète des options)
@@ -78,6 +79,10 @@ doc/               SEI_CNN.pdf (sujet, 61 p.), BoiteAOutilsHLSImage.pdf (Catapul
 hls/include/       ac_fixed.h, ac_int.h (Mentor/Siemens AC datatypes) — inclus par cpp/config.hpp
 hls/AUDIT_HLS.md   audit du passage à Catapult : codes A (bloquant) B (structure) C (testbench/flot) D (QoR), plan
 hls/gen_coeffs.py  data/coef/*.txt → cpp/coeffs_k3.hpp, coeffs_k5.hpp (texte des nombres recopié tel quel)
+hls/cnn.tcl        script Catapult du CNN (fichiers, Zynq, 100 MHz, go extract, SCVerify) ; lancer depuis hls/work/
+hls/tb_hls.cpp     testbench SCVerify (CCS_MAIN/CCS_DESIGN) : N images, compare à hls/ref/ ; env CNN_ROOT, CNN_TB_N
+hls/stub/          faux mc_scverify.h pour compiler tb_hls sur PC (jamais dans le chemin d'include de Catapult)
+hls/ref/           scores exacts de 200 images (config large, k=3/5) : référence de make nonreg et du testbench
 hls/Demo_FIR/      démo Catapult de l'encadrant (FIR) ; hls/demoFir.tcl : script de la démo
 fpga/ rapport/ build/   vides (.gitkeep)
 ```
@@ -92,6 +97,12 @@ make explore ARGS="run --runs 3"      # = .venv/bin/python Exploration/explore.p
 make validate ARGS="<run> <run>:ref float -b test 2 [--start S -n N] [--md fichier.md]"
 make efficiency [ARGS="-s 1"]         # graphes + tableaux dans runs/efficiency/
 make tree-check      # vérifie l'arborescence imposée (liste blanche ROOT_OK dans le Makefile)
+
+# HLS
+make nonreg          # non-régression bit-exacte du modèle C++ (200 img vs hls/ref/scores_k5.txt)
+make tb-hls ARGS=5   # testbench HLS sur PC (sans Catapult)
+make coeffs          # regénère les ROM cpp/coeffs_k*.hpp après un changement de data/coef/
+# École : source hls/bash_mentor_24 ; mkdir -p hls/work && cd hls/work && catapult -shell -file ../cnn.tcl
 
 # Modèle C++
 cmake -S cpp -B cpp/build && cmake --build cpp/build -j
@@ -161,7 +172,8 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
   `static const double` sur PC (converties au 1er appel) et en `static const ac_fixed` sous `__SYNTHESIS__` :
   g++ met ~40 s / 1,3 Go à compiler la version `__SYNTHESIS__`, ne pas l'utiliser hors Catapult.
 - La partie synthétisable (cnn.cpp, utils.*, coeffs) : pas de `std::`, pas d'allocation, dimensions constantes.
-  Toute modification doit rester **bit-exacte** (même ordre d'accumulation, quantification avant ReLU).
+  Toute modification doit rester **bit-exacte** (même ordre d'accumulation, quantification avant ReLU) : `make nonreg`.
+  Si les formats de config.hpp changent, régénérer la référence (`main 200 5 data_batch_1.bin --dump hls/ref/scores_k5.txt`).
 - Ajouter un format ⇒ `config.hpp`, `main.cpp` (print_format), `cnn.*`, **et** `Exploration/explo/formats.py:FORMATS` + `usage_counts`.
 - `make tree-check` échoue si un fichier non listé dans `ROOT_OK` (Makefile) est à la racine : tout nouveau
   fichier racine doit y être ajouté. Il ignore les périphériques caractère (dotfiles fantômes du sandbox Claude).
@@ -177,7 +189,10 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
 - Suivre `hls/AUDIT_HLS.md` : A et B faits (tableaux fixes, top `cnn(image, scores)`, coefficients en ROM).
   Frontière HW/SW décidée : rognage + normalisation hors matériel (testbench / ARM). Config de formats : large
   (16 bits) pour l'instant, optimisation plus tard (D-01). B-06 (budget BRAM) reporté.
-- Prochaine étape : C (testbench SCVerify `CCS_MAIN`/`CCS_DESIGN`, script Tcl, includes `<ac_fixed.h>`).
+- C fait : `#include <ac_fixed.h>` partout (copie `hls/include/` via `-I` hors Catapult ; Exploration : `paths.INCLUDES`,
+  hors `CXXFLAGS` pour garder le hash du cache indépendant de la machine), testbench `hls/tb_hls.cpp`, `hls/cnn.tcl`.
+- Prochaine étape : lancer `hls/cnn.tcl` sous Catapult. Le nom de bibliothèque Zynq (`FPGA_LIB`) y est SUPPOSÉ :
+  le vérifier dans la GUI. Cloner le dépôt dans un chemin SANS espace (SCVerify/make). Puis D (pipeline, mémoires).
 - Outils école : Catapult 10.5c, Questa, Precision, Vivado 2017.1 (scripts d'environnement dans `doc/hls/bash_*`,
   chemins `/softslin/...`). Cible : Zybo Z7 (Zynq), canevas de plateformes fournis par l'encadrant
   (`/tp-fmr/smancini/SEI_SoC_CNN/`). Méthodo HLS + plateformes : `doc/BoiteAOutilsHLSImage.pdf`.
