@@ -40,6 +40,8 @@ flatten (ordre HWC !) → 180 → perceptron 180x10 + biais → 10 scores (argma
 
 Précision de référence (float, `Results/PythonResults.md`, 10 000 img) :
 3x3/TF_SAME/pool3 = 77.03 %, **5x5/TF_SAME/pool3 = 87.81 %**, 5x5 centré = 74.51 %, 5x5 pool5 = 71.27 %.
+**Attention : ces chiffres sont sur `data_batch_1` (images d'entraînement).** Sur `test_batch` (vraie
+généralisation), le float 5x5 fait **81.62 %** (`Exploration/validate.py`, 2026-11-24, `Exploration/runs/validation_k5.md`).
 
 ## Arborescence
 
@@ -62,6 +64,10 @@ cpp/               modèle C++17 virgule fixe (testbench + calcul dans le même 
 Exploration/       outil d'exploration bits/précision (Python + rich), voir plus bas
   explore.py       point d'entrée (docstring = doc complète des options)
   bits_stats.py    stats agrégées par variable sur tous les runs → runs/bits_stats/
+  efficiency.py    efficacité des pas passés (Δbits pondérés / Δacc), où part la marge → runs/efficiency/
+  validate.py      teste des configs (run, run:ref, id, .hpp, current, float) sur test_batch / autres
+                   batches, en parallèle ; résultats image par image en cache dans runs/validation.jsonl
+  pistes_prochaine_exploration.md   idées pour les prochains runs (ordre par poids, seuil progressif)
   explo/           paths, formats, runner, monitor, search, cache, sessions, dashboard, plots, cli
   runs/            résultats (cache.jsonl ~5600 évals, un dossier par run, sessions/ ; PNG non versionnés)
   build/           binaires temporaires de l'exploration (ignoré par git)
@@ -80,6 +86,8 @@ make                 # aide (liste des cibles)
 make venv            # crée .venv + requirements.txt (numpy, matplotlib, pillow, tqdm, rich)
 make run             # tree-check + python/main.py (config en dur dans main(), voir pièges)
 make explore ARGS="run --runs 3"      # = .venv/bin/python Exploration/explore.py run --runs 3
+make validate ARGS="<run> <run>:ref float -b test 2 [--start S -n N] [--md fichier.md]"
+make efficiency [ARGS="-s 1"]         # graphes + tableaux dans runs/efficiency/
 make tree-check      # vérifie l'arborescence imposée (liste blanche ROOT_OK dans le Makefile)
 
 # Modèle C++

@@ -3,14 +3,18 @@
 abscisse = nb de bits de la variable (I rond plein, F carré creux), un point par
 valeur prise ; ordonnée = bits moyens par valeur (métrique bits_mem du projet, pondérée par
 le nb de valeurs stockées) en fin de run, moyennés sur les runs où la variable prend cette valeur ; taille du point = nb de runs.
+Les points de séries différentes qui tombent sur la même abscisse sont décalés
+horizontalement (autour de la valeur entière) pour rester tous visibles.
 
-Usage : python3 bits_stats.py [--runs runs] [--out runs/bits_stats]
+Usage : python3 bits_stats.py [--runs runs] [--out runs/bits_stats] [--max-bits 13]
+  --max-bits B : ne garde que les runs finissant à moins de B bits moyens/valeur
+                 (sortie par défaut : runs/bits_stats_lt<B>)
 """
 import argparse, csv, json, re, sys
 from collections import OrderedDict
 from pathlib import Path
 
-import matplotlib
+import matplotlib, matplotlib.ticker
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -46,12 +50,24 @@ def plot_type(ax, typ, names, pts):
     Un point par valeur prise par la variable ; y = total de bits moyen des
     runs où la variable prend cette valeur ; taille = nb de runs concernés."""
     cols = plt.cm.tab10.colors
+    series = [(n, p) for n in names for p in "IF"]
+    # décalage horizontal des séries qui partagent une abscisse
+    at_x = {}
+    for key in series:
+        for x in pts[key]:
+            at_x.setdefault(x, []).append(key)
+    off = {}
+    for x, keys in at_x.items():
+        m = len(keys); step = min(.15, .7 / m)
+        for j, key in enumerate(keys):
+            off[(key, x)] = (j - (m - 1) / 2) * step
     for g, n in enumerate(names):
         for part, mk, fill in (("I", "o", True), ("F", "s", False)):
             d = pts[(n, part)]
-            xs = sorted(d)
-            ys = [np.mean(d[x]) for x in xs]
-            sz = [18 + 10 * len(d[x]) for x in xs]
+            xs0 = sorted(d)
+            xs = [x + off[((n, part), x)] for x in xs0]
+            ys = [np.mean(d[x]) for x in xs0]
+            sz = [18 + 10 * len(d[x]) for x in xs0]
             ax.scatter(xs, ys, s=sz, marker=mk, color=cols[g], alpha=.8,
                        facecolors=cols[g] if fill else "none",
                        linewidths=1.5, label=f"{n}.{part}")
@@ -60,20 +76,27 @@ def plot_type(ax, typ, names, pts):
     ax.set_xlabel("nombre de bits de la variable")
     ax.set_ylabel("bits moyens par valeur (fin de run)")
     ax.set_title(typ); ax.grid(alpha=.3)
+    ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
     ax.legend(fontsize=7, ncol=2)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", default="runs")
-    ap.add_argument("--out", default="runs/bits_stats")
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--max-bits", type=float, default=None,
+                    help="ne garder que les runs finissant sous ce nb de bits moyens/valeur")
     a = ap.parse_args()
     runs = load_runs(a.runs)
-    if not runs:
-        raise SystemExit(f"aucun state.json dans {a.runs}")
-    out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    names = list(OrderedDict.fromkeys(n for c in runs.values() for n in c))
     total = {r: bits(c, KS[r], "mem")[0] for r, c in runs.items()}  # bits moyens/valeur
+    if a.max_bits is not None:
+        runs = OrderedDict((r, c) for r, c in runs.items() if total[r] < a.max_bits)
+    if not runs:
+        raise SystemExit(f"aucun run retenu dans {a.runs}")
+    out = Path(a.out or ("runs/bits_stats" if a.max_bits is None
+                         else f"runs/bits_stats_lt{a.max_bits:g}"))
+    out.mkdir(parents=True, exist_ok=True)
+    names = list(OrderedDict.fromkeys(n for c in runs.values() for n in c))
     pts = {(n, p): {} for n in names for p in "IF"}
     data = {n: ([], []) for n in names}
     with open(out / "bits_final.csv", "w", newline="") as f:
@@ -112,7 +135,8 @@ def main():
         plot_type(ax, t, ns, pts)
     for ax in axs[len(types):]:
         ax.axis("off")
-    fig.suptitle(f"Bits moyens par valeur (fin de run) selon le nb de bits de chaque variable ({len(runs)} runs)")
+    filt = "" if a.max_bits is None else f", runs < {a.max_bits:g} bits"
+    fig.suptitle(f"Bits moyens par valeur (fin de run) selon le nb de bits de chaque variable ({len(runs)} runs{filt})")
     fig.tight_layout(); fig.savefig(out / "bits_all.png", dpi=130)
     print(f"{len(runs)} runs, {len(types)} types -> {out}/")
 

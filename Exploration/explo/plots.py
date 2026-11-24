@@ -9,7 +9,7 @@ from matplotlib.patches import Patch
 from . import paths
 from .cache import Cache, load_runs
 from .dashboard import console
-from .formats import NAMES, code_hash, usage_counts
+from .formats import FMT, NAMES, code_hash, usage_counts
 from .monitor import PairedMonitor
 from .formats import unpack
 
@@ -143,6 +143,64 @@ def plot_formats(run_dir):
                  f"{s['final']['bits_mem']:.2f} bits moyens ({s['final']['acc']:.2f} %)")
     fig.tight_layout()
     fig.savefig(run_dir / "formats.png", dpi=120)
+
+
+def plot_formats_pyramid(run_dir):
+    """Formats alignés sur la virgule binaire, façon pyramide des âges :
+    bits entiers (I) à gauche de l'axe central, bits fractionnaires (F) à droite.
+    Le bit de poids 2^p occupe la case [-(p+1), -p] : un format <W, I> couvre donc [-I, F].
+    I < 0 (ou F < 0) : les cases entre la virgule et le format sont des zéros implicites."""
+    s = json.loads((run_dir / "summary.json").read_text())
+    start, final = s["reference"]["config"], s["final"]["config"]
+    cnt = usage_counts(s.get("k", 5))
+    tot = sum(c[0] for c in cnt.values())
+    names = [n for n in NAMES if n in final]
+    fig = Figure(figsize=(11, 7))
+    ax = fig.subplots()
+    ys = list(range(len(names)))[::-1]
+    c_int, c_frac = "tab:blue", "tab:orange"
+    for y, n in zip(ys, names):
+        I0, F0 = start[n]
+        I, F = final[n]
+        ax.barh(y, I0 + F0, left=-I0, height=0.8, color="none", edgecolor="gray", ls="--", lw=0.8)
+        w_int = I + min(0, F)                       # cases [-I, min(0, F)]
+        if w_int > 0:
+            ax.barh(y, w_int, left=-I, height=0.8, color=c_int, alpha=0.85)
+        w_frac = F - max(0, -I)                     # cases [max(0, -I), F]
+        if w_frac > 0:
+            ax.barh(y, w_frac, left=max(0, -I), height=0.8, color=c_frac, alpha=0.85)
+        if I < 0:                                   # zéros implicites entre la virgule et le MSB
+            ax.barh(y, -I, left=0, height=0.8, color="0.9", edgecolor="0.4", ls=":", lw=1)
+        if F < 0:
+            ax.barh(y, -F, left=F, height=0.8, color="0.9", edgecolor="0.4", ls=":", lw=1)
+        if FMT[n][2]:                               # signé : bit de signe hachuré (MSB)
+            ax.barh(y, 1, left=-I, height=0.8, color="none", edgecolor="k", hatch="////", lw=0)
+        ax.text(max(F0, F) + 0.4, y, f"<{I + F},{I}>   {I0 + F0} → {I + F} bits", va="center", fontsize=8)
+    ax.axvline(0, color="k", lw=1.5)
+    ax.set_yticks(ys, [f"{n}  ({100 * cnt[n][0] / tot:.1f} %)" for n in names])
+    for lab in ax.get_yticklabels():
+        if lab.get_text().startswith("acc"):
+            lab.set_fontstyle("italic")
+    lo = -max(max(start[n][0], final[n][0]) for n in names) - 1
+    hi = max(max(start[n][1], final[n][1]) for n in names) + 9
+    ax.set_xlim(lo, hi)
+    ticks = list(range(int(lo) + 1, int(hi) - 6))
+    ax.set_xticks(ticks, [str(abs(t)) for t in ticks], fontsize=8)
+    ax.set_xticks([t + 0.5 for t in ticks], minor=True)
+    ax.grid(axis="x", which="major", alpha=0.25)
+    ax.set_xlabel("←  bits entiers I        |  virgule  |        bits fractionnaires F  →")
+    ax.text(0, len(names) - 0.3, "virgule", ha="center", va="bottom", fontsize=8)
+    handles = [Patch(color=c_int, alpha=.85, label="bits entiers (I)"),
+               Patch(color=c_frac, alpha=.85, label="bits fractionnaires (F)"),
+               Patch(facecolor="none", edgecolor="k", hatch="////", label="bit de signe"),
+               Patch(facecolor="none", edgecolor="gray", ls="--", label="format de départ"),
+               Patch(facecolor="0.9", edgecolor="0.4", ls=":", label="zéros implicites (I < 0 ou F < 0)")]
+    fig.legend(handles=handles, loc="lower center", ncol=5, fontsize=8, frameon=False)
+    ax.set_title(f"{s['run']} — formats alignés sur la virgule : {s['reference']['bits_mem']:.2f} → "
+                 f"{s['final']['bits_mem']:.2f} bits moyens ({s['final']['acc']:.2f} %)\n"
+                 "entre parenthèses : poids de la variable dans la métrique mem", fontsize=10)
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.savefig(run_dir / "formats_pyramid.png", dpi=120)
 
 
 def plot_curves(run_dir, ref_seq, threshold, z, min_images):

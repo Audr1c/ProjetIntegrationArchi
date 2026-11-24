@@ -18,7 +18,7 @@ from . import paths
 from .cache import Cache, find_run, load_runs
 from .dashboard import Dashboard, console, fmt_time
 from .formats import FMT, NAMES, bits, code_hash, make_config_hpp, width
-from .plots import pareto, pass_stats, plot_all, plot_formats, plot_progress, plot_progress_all, plot_run
+from .plots import pareto, pass_stats, plot_all, plot_formats, plot_formats_pyramid, plot_progress, plot_progress_all, plot_run
 from .runner import Runner
 from .search import Exploration
 from .sessions import ask_resume, find_session, new_session, save_session, show_session
@@ -197,6 +197,7 @@ def cmd_plot(args):
         plot_run(paths.RUNS / s["run"], cache, args.metric)
         plot_run(paths.RUNS / s["run"], cache, args.metric, zoom=True)
         plot_formats(paths.RUNS / s["run"])
+        plot_formats_pyramid(paths.RUNS / s["run"])
         plot_progress(paths.RUNS / s["run"])
     outs.append(plot_progress_all(args.k, args.images))
     # affichage à l'écran : uniquement ici (fil principal, aucun worker en cours)

@@ -8,6 +8,9 @@ doc/hls/
 # Décommenter pour ne pas versionner les sujets PDF :
 # doc/SEI_CNN.pdf
 # doc/BoiteAOutilsHLSImage.pdf
+# NB : doc/hls/include/ac_fixed.h et ac_int.h sont ignorés avec doc/hls/.
+# Si le code HLS les inclut, les copier dans un include/ versionné
+# (ac_types est open source, Apache 2.0) pour qu'un clone neuf compile.
 
 # ---------- Données CIFAR-10 et poids générés ----------
 # data/ : tout est ignoré sauf les coefficients du CNN (data/coef/)
@@ -37,35 +40,88 @@ env/
 
 # ---------- C / C++ (modèle virgule fixe, testbench) ----------
 *.o
+*.o.version
 *.a
 *.so
+*.so.version
 *.out
 *.exe
 build/
 bin/
 obj/
-core
-core.*
+# Core dumps (sans attraper core.cpp / core.h ni un dossier src/core/)
+/core
+core.[0-9]*
 
 # ---------- Catapult HLS / SCVerify ----------
+# Projet Catapult : Catapult.ccs + dossier Catapult/ contenant
+#   <TOP>.v1 … .vN/ (rtl.vhdl, concat_rtl.vhdl, *.rpt, *.psr, *.sdc, schedule.gnt,
+#   schematic.nlv, CDesignChecker/, scverify/…) et SIF/ (base interne, partials/, *.sif)
+# À VERSIONNER : sources C++, testbench, scripts .tcl (directives*.tcl, demo_*.tcl).
+# Pour garder un RTL de référence : le copier hors de Catapult/ (ex. rtl/) puis git add.
 Catapult/
 Catapult_*/
 *.ccs
 *.ccs.bak
 catapult.log
 catapult_*.log
-messages.txt
 design_checker_*
 scverify/
+SIF/
+*.sif
+*.ilt
+*.nlv
+*.gnt
+*.psr
+*.psr.sdc
 *.ldb
+# Fichiers générés par Catapult qui pourraient s'échapper du dossier projet
+ccs_env.mk
+cycle_set.tcl
+reg_sharing.tcl
+res_sharing.tcl
+adjust_char_library.tcl
+rtl.vhdl_order*.txt
+# messages.txt de Catapult uniquement (pas un éventuel messages.txt perso)
+**/Catapult*/**/messages.txt
+# Signaux produits par le testbench (décommenter si regénérés à chaque run)
+# output_signal.txt
+# *_output*.txt
 
 # ---------- Simulation HDL (ModelSim/Questa, GHDL) ----------
 work/
+mgc_hls/
+*_msim/
 transcript
 vsim.wlf
+vsim.dbg
 *.wlf
 modelsim.ini
 *.vstf
+# Bibliothèques compilées Questa (_info, _vmake, *.qdb/qpg/qtl, _sc/, *_opt/)
+_info
+_vmake
+_lib*.qdb
+_lib*.qpg
+_lib*.qtl
+_temp/
+_tempmsg
+_mxl_sc
+_sc/
+_data/
+_viscom/
+VH_HASH_DATA
+*.dbs
+# Horodatages de compilation SCVerify
+*.vhdlts
+*.cxxts
+*.libts
+*.inits
+*topts
+*topvopts
+make_dir
+make_libs
+# GHDL
 *.cf
 *.ghw
 *.vcd
@@ -120,7 +176,6 @@ results/
 *.nav
 *.snm
 *.vrb
-*.out
 
 # ---------- Éditeurs / OS ----------
 .claude/

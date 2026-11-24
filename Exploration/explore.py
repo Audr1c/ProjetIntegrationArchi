@@ -47,6 +47,7 @@ Tout est stocké dans Exploration/runs/ :
     <run>/curves.png        écart à la référence image par image (quand coupe-t-on)
     <run>/plot_zoom.png     même nuage, zoomé sur la partie haute (réductions retenues annotées)
     <run>/formats.png       barres des formats : départ / final
+    <run>/formats_pyramid.png  formats alignés sur la virgule (I à gauche, F à droite, façon pyramide des âges)
     <run>/state.json        état pour reprendre un run interrompu
     sessions/<id>.json      liste de runs prévue (graines, seuils) et leur statut
     all_k*_n*_mem[_zoom].png  toutes les explorations + front de Pareto (zoom : ids des points)

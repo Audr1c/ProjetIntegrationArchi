@@ -34,7 +34,7 @@ REQUIRED  := data/cifar-10-batches-bin/data_batch_1.bin \
              hls/include/ac_fixed.h
 
 .DEFAULT_GOAL := help
-.PHONY: help init tree tree-check venv check run explore clean distclean
+.PHONY: help init tree tree-check venv check run explore validate efficiency clean distclean
 
 help: ## Affiche cette aide
 	@echo "Commandes disponibles :"
@@ -96,6 +96,12 @@ run: check ## Lance python/main.py (crée le venv si besoin)
 
 explore: venv ## Exploration bits/précision (ARGS="run --runs 3", "list", "plot"…)
 	"$(CURDIR)/$(PY)" Exploration/explore.py $(or $(ARGS),--help)
+
+validate: venv ## Teste des configs sur plus d'images (ARGS="<run> <run>:ref float -b test 2")
+	"$(CURDIR)/$(PY)" Exploration/validate.py $(or $(ARGS),--help)
+
+efficiency: venv ## Efficacité des pas des runs passés (bits gagnés × poids / précision perdue)
+	MPLCONFIGDIR="$${MPLCONFIGDIR:-$${TMPDIR:-/tmp}}" "$(CURDIR)/$(PY)" Exploration/efficiency.py $(ARGS)
 
 clean: ## Supprime les caches et build/
 	rm -rf $(SRC_DIR)/__pycache__ build/*

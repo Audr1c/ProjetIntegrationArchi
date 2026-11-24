@@ -11,7 +11,7 @@ from . import paths
 from .dashboard import console, fmt_time
 from .formats import NAMES, bits, bounds, make_config_hpp, pack, point_id, start_config, unpack, with_value
 from .monitor import PairedMonitor, make_order
-from .plots import pass_stats, plot_curves, plot_formats, plot_progress, plot_run
+from .plots import pass_stats, plot_curves, plot_formats, plot_formats_pyramid, plot_progress, plot_run
 
 # ============================================================
 # Descente d'une variable : exponentielle puis dichotomie asynchrone
@@ -510,6 +510,7 @@ class Exploration:
             plot_run(self.dir, self.cache)
             plot_run(self.dir, self.cache, zoom=True)
             plot_formats(self.dir)
+            plot_formats_pyramid(self.dir)
             plot_progress(self.dir)
             if self.ref_seq:
                 plot_curves(self.dir, self.ref_seq, self.threshold, self.args.z, self.args.min_images)
