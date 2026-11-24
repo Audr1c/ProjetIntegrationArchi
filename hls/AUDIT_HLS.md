@@ -1,6 +1,7 @@
 # Audit : passage du modèle C++ (`cpp/`) à la HLS Catapult
 
 Date : 2026-11-24. Périmètre : `cpp/` au commit `dd12d0b` + modification locale de `cnn.cpp`.
+Les numéros de ligne cités sont ceux d'**avant** la transition (`dd12d0b`).
 Modèle de flot : `hls/Demo_FIR/` (sources, `demo_sim.tcl`, log Catapult 2024.2 sans erreur) et `hls/demoFir.tcl`.
 
 ## Sources
@@ -35,23 +36,23 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 | A-03 | 🔴 | `utils.cpp:68-71, 146-149` | Tailles fixées à l'exécution + `resize()` | ✅ fait (commit A) |
 | A-04 | 🔴 | `utils.cpp`, `cnn.cpp:8` | Fonctions qui **renvoient** des tableaux (`vector`/`imageT`) | ✅ fait (commit A) |
 | A-05 | 🔴 | `cnn.hpp:22-34` | Interface du top : `vector` en retour, `struct` de `vector` en entrée | ✅ fait (commit A) |
-| B-01 | 🟠 | `utils.cpp:74-83, 115-119` | Bornes de boucles lues à l'exécution, k=3/5 choisi à l'exécution | À faire |
-| B-02 | 🟠 | `extract_coeff.*`, `main.cpp` | Coefficients lus dans un fichier texte : aucune source synthétisable | À faire |
-| B-03 | 🟡 | `utils.hpp:128-133` | `max_pool(size, stride, centered)` paramétré à l'exécution | À faire |
-| B-04 | 🟡 | `cnn.cpp:7-16, 52` | `flatten_hwc` recopie 180 valeurs dans un buffer | À faire |
-| B-05 | 🟠 | interface du top | Tableaux d'interface sans taille déclarée (`-ARRAY_SIZE 1024` par défaut) | À faire |
-| B-06 | 🟠 | `cnn.cpp` | Grandes mémoires intermédiaires (36 864 mots pour conv1) : bibliothèque RAM et budget BRAM | À faire |
-| B-07 | 🟠 | `read_image.cpp` | Crop + normalisation en `double` dans le testbench : la frontière HW/SW de l'entrée n'est pas définie | À décider |
+| B-01 | 🟠 | `utils.cpp:74-83, 115-119` | Bornes de boucles lues à l'exécution, k=3/5 choisi à l'exécution | ✅ fait (commits A/B) |
+| B-02 | 🟠 | `extract_coeff.*`, `main.cpp` | Coefficients lus dans un fichier texte : aucune source synthétisable | ✅ fait (commit B) |
+| B-03 | 🟡 | `utils.hpp:128-133` | `max_pool(size, stride, centered)` paramétré à l'exécution | ✅ fait (commit B) |
+| B-04 | 🟡 | `cnn.cpp:7-16, 52` | `flatten_hwc` recopie 180 valeurs dans un buffer | ✅ fait (commit B) |
+| B-05 | 🟠 | interface du top | Tableaux d'interface sans taille déclarée (`-ARRAY_SIZE 1024` par défaut) | ✅ fait (commit A) |
+| B-06 | 🟠 | `cnn.cpp` | Grandes mémoires intermédiaires (36 864 mots pour conv1) : bibliothèque RAM et budget BRAM | ⏸ reporté |
+| B-07 | 🟠 | `read_image.cpp` | Crop + normalisation en `double` dans le testbench : la frontière HW/SW de l'entrée n'est pas définie | ✅ décidé : hors matériel |
 | C-01 | 🔴 | `main.cpp` | Pas de testbench SCVerify (`CCS_MAIN` / `CCS_DESIGN` / `CCS_RETURN`) | À faire |
 | C-02 | 🟠 | script Tcl | Fichiers du testbench à exclure de la synthèse (`-exclude true`) | À faire |
 | C-03 | 🟠 | `hls/` | Pas de script Tcl CNN, et la cible de la démo est un Artix-7 au lieu du Zynq-7000 | À faire |
 | C-04 | 🟠 | `config.hpp:15`, `utils.hpp:6` | Include de la copie locale `../hls/include/ac_fixed.h` (v4.0) au lieu de celle de Catapult | À faire |
-| C-05 | 🟡 | `utils.hpp:5,8`, `cnn.hpp:4,8` | `<vector>` et `using namespace std` dans les en-têtes du design | À faire |
-| C-06 | 🟠 | — | Aucune vérification bit-exacte entre l'ancien et le nouveau modèle | À faire |
+| C-05 | 🟡 | `utils.hpp:5,8`, `cnn.hpp:4,8` | `<vector>` et `using namespace std` dans les en-têtes du design | ✅ fait (commit A) |
+| C-06 | 🟠 | — | Aucune vérification bit-exacte entre l'ancien et le nouveau modèle | 🔶 faite hors dépôt (A et B), outil à intégrer |
 | C-07 | 🟠 | testbench | Simulation RTL de ~10,7 M MAC/image : impossible sur 1000 images | À faire |
 | C-08 | 🟠 | `main.cpp:14-16` | `PROJECT_ROOT` vaut `".."` hors CMake : chemins faux dans le dossier de SCVerify | À faire |
-| C-09 | 🟠 | `CMakeLists.txt`, `Exploration/explo/runner.py` | Nouveaux fichiers et `-DKS`, cache d'exploration invalidé | À faire |
-| D-01 | 🟠 | `config.hpp` | Config actuelle = 16 bits « large » + accumulateurs auto (~40 bits) | À décider |
+| C-09 | 🟠 | `CMakeLists.txt`, `Exploration/explo/runner.py` | Nouveaux fichiers et `-DKS`, cache d'exploration invalidé | ✅ fait (commits A/B) |
+| D-01 | 🟠 | `config.hpp` | Config actuelle = 16 bits « large » + accumulateurs auto (~40 bits) | ✅ décidé : large pour l'instant |
 | D-02 | 🟡 | `utils.cpp:13-19`, `cnn.cpp` | ReLU = passe complète en plus sur chaque feature map | Après A/B |
 | D-03 | 🟡 | `utils.cpp:33-37` | Test de padding (6 comparaisons) à chaque MAC, dont un test de canal inutile | Après A/B |
 | D-04 | 🟠 | `cnn.cpp` | conv1 stockée en entier (36 864 mots) avant le pool : fusion conv+pool possible | Après A/B |
@@ -112,12 +113,19 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 ### B-02 🟠 Les coefficients n'ont aucune source synthétisable
 - **Constat** : `parse_tensors` lit un fichier texte (`std::map`, `std::string`, `ifstream`), puis `to_kernel`/`to_bias` remplissent des `vector`. Tout cela relève du testbench.
 - **Règle** : « le maximum de paramètres sont statiques » ; « Pour initialiser une mémoire par un tableau de constantes, il faut bien spécifier à Catapult-C que la variable est allouée à une RAM ou à une ROM » [BAO p.16, p.26]. Les tableaux constants au-delà de `ROM_THRESHOLD` (64 dans `demo_sim.tcl`) deviennent des ROM.
-- **Correction (recommandée)** : un script Python (`hls/gen_coeffs.py`) réutilise `python/extractCoeff.parse_tensors` et produit `cpp/coeffs_k5.hpp` et `cpp/coeffs_k3.hpp`. Les noyaux sont déjà réordonnés en `[C][L][M][N]`, comme le fait `to_kernel` :
+- **Correction (faite, commit B)** : `hls/gen_coeffs.py` produit `cpp/coeffs_k5.hpp` et `cpp/coeffs_k3.hpp`.
+  Les noyaux sont réordonnés en `[C][L][M][N]` et **le texte des nombres est recopié tel quel**, sans passer par
+  le `float32` de `python/extractCoeff.py`. Les en-têtes sont inclus **dans le corps de `cnn()`** : le manuel
+  déconseille les globales (§6.1.2). Chaque tableau est encadré par des macros définies dans `cnn.cpp` :
   ```cpp
-  static const ker1_t  K1[64*3*KS*KS] = { 1.2345678901234567e-02, … };  // littéraux double
-  static const bias1_t B1[64]         = { … };
+  CNN_ROM_BEGIN(ker1_t, ker1, K1_SIZE)   7.86114633e-01, 1.03407450e-01, …   CNN_ROM_END(ker1_t, ker1, K1_SIZE)
+  // __SYNTHESIS__ (Catapult) : static const ker1_t ker1[K1_SIZE] = { … };              -> ROM
+  // PC                       : static const double ker1_d[K1_SIZE] = { … }; converti au 1er appel
   ```
-  Les littéraux restent en `double` et la conversion se fait à la compilation par le constructeur `ac_fixed(double)`, le même que celui de `to_kernel`. Résultat **bit-exact** avec le modèle actuel, et l'en-tête **n'a pas à être regénéré** quand un format change (l'exploration continue de marcher). [BAO §2.3.1] illustre exactement cette forme d'initialisation.
+  Les deux chemins font la même conversion `ac_fixed(double)` et sont vérifiés bit-exacts. Le chemin PC
+  existe parce que g++ met environ 40 s et 1,3 Go à compiler 74 000 `ac_fixed` initialisés statiquement,
+  contre 0,8 s ici (l'exploration recompile `cnn.cpp` à chaque évaluation). Pas besoin de regénérer quand
+  un format change ; seulement quand `data/coef/` change.
 - **Alternative** (plus tard, si on veut changer les poids depuis l'ARM) : les poids deviennent des tableaux d'interface (ports mémoire, comme `coeffs[N_TAPS]` dans [FIR]).
 
 ### B-03 🟡 `max_pool` paramétré à l'exécution
@@ -143,11 +151,15 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 
   Zynq-7010 (Zybo Z7-10) : 60 BRAM36 = 2,1 Mbit, 80 DSP. Zynq-7020 (Z7-20) : 140 BRAM36 = 4,9 Mbit, 220 DSP. La plateforme de l'encadrant utilise aussi des BRAM pour la mémoire vidéo.
 - **Correction** : ajouter la bibliothèque de RAM (`solution library add Xilinx_RAMS`, comme dans `demo_sim.tcl`). Vérifier quelle carte on a (Z7-10 ou Z7-20). Avec la config 16 bits sur une Z7-10, ça ne tient pas : voir D-01 et D-04.
+- **État** : ⏸ reporté après la première synthèse (décision du 2026-11-24).
 
 ### B-07 🟠 Frontière HW/SW de l'entrée non définie
 - **Constat** : le crop 32→24 et la normalisation (moyenne, écart-type, `sqrt`, division) se font en `double` dans `read_image.cpp`. Sur la carte, la caméra fournit des pixels 8 bits.
 - **Règle** : `sqrt` et la division flottante ne sont pas synthétisables tels quels [UR §6 : `math.h`]. [CLAUDE.md] et le sujet admettent une normalisation côté ARM.
-- **Décision à prendre** : (a) l'ARM fait crop + normalisation et écrit `input_t image[1728]` en mémoire. C'est le plus simple et l'interface du top ne change pas. (b) Le matériel reçoit les pixels bruts `ac_int<8,false>` et normalise lui-même (`ac_math` pour `sqrt`/division). Recommandation : **(a)** d'abord.
+- **Décision (2026-11-24)** : la partie synthétisable prend **l'image déjà rognée et normalisée**
+  (`input_t image[1728]`, rangée `[C][H][W]`) et renvoie **les 10 scores** (`out_t scores[10]`). Les
+  coefficients sont en ROM interne. Tout le reste (lecture CIFAR, rognage, normalisation, argmax,
+  statistiques) reste dans le testbench, puis plus tard sur l'ARM.
 
 ---
 
@@ -197,6 +209,10 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 
 ### C-06 🟠 Pas de vérification bit-exacte ancien → nouveau modèle
 - **Constat** : la réécriture touche toute la chaîne de calcul. Une erreur d'indice (CHW/HWC, `[C][L][M][N]`) coûterait des points sans planter.
+- **État** : pour les étapes A et B, les scores de 200 images ont été comparés **à l'identique** (`cmp`) aux
+  scores de l'ancien modèle pour trois configs : k=5, k=3, et `s5949`, dont les accumulateurs sont tronqués.
+  En plus, sous `-D__SYNTHESIS__`, la variante ROM `ac_fixed` donne les mêmes scores. Programmes de dump
+  temporaires, non versionnés : l'option `--dump` reste à ajouter.
 - **Correction** : **avant** la réécriture, produire une référence avec l'ancien modèle : les 10 scores de N=200 images dans un fichier (option `--dump` dans `main.cpp`). Après, comparer **à l'identique** (`==` sur les `ac_fixed`, pas seulement la précision). Garder les mêmes ordres d'accumulation pour que ce soit possible (voir B-04 et D-02). Le testbench SCVerify relit ce même fichier.
 
 ### C-07 🟠 Durée de la simulation RTL
@@ -209,7 +225,9 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 
 ### C-09 🟠 Impact sur CMake et sur l'exploration
 - **Constat** : `runner.py` compile une liste de fichiers codée en dur (`main.cpp`, `cnn.cpp`, objets `extract_coeff.o`, `read_image.o`) et passe k à l'exécution. Le cache est indexé par le hash de tous les `cpp/*.?pp` sauf `config.hpp`.
-- **Correction** : ajouter `-DKS=<k>` dans `Runner.defines()`, ajouter les nouveaux fichiers dans `CMakeLists.txt` et `runner.py`, et supprimer `extract_coeff.o` si `main.cpp` ne lit plus les coefficients. Le cache sera invalidé, ce qui est **normal** : si C-06 est bit-exact, les anciens résultats restent valables, mais le hash ne le sait pas.
+- **État** : fait. `runner.py` passe `-DKS=<k>` et ne compile plus que `read_image.o`. `extract_coeff.*` a été supprimé
+  (la lecture du fichier est remplacée par les ROM), et `CMakeLists.txt` est à jour.
+- **Correction prévue** : ajouter `-DKS=<k>` dans `Runner.defines()`, ajouter les nouveaux fichiers dans `CMakeLists.txt` et `runner.py`, et supprimer `extract_coeff.o` si `main.cpp` ne lit plus les coefficients. Le cache sera invalidé, ce qui est **normal** : si C-06 est bit-exact, les anciens résultats restent valables, mais le hash ne le sait pas.
 
 ---
 
@@ -219,6 +237,7 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 - `config.hpp` contient la config **large** : tout en 16 bits, avec des accumulateurs automatiques d'environ 40 bits (produit exact + 11 bits de garde). Le run `20261119-223144_k5_t1_s5949` passe à 10,8 bits moyens (88,1 %, réf. 89,0 %), soit environ −40 % de BRAM (voir B-06).
 - Le multiplieur d'un DSP48E1 fait 25×18 bits signés. Avec des poids ≤ 18 bits et des données ≤ 25 bits, chaque MAC tient dans un seul DSP.
 - Vérifier sur `test_batch` (`make validate`) avant de figer la config.
+- **Décision (2026-11-24)** : on synthétise d'abord avec la config **large** pour valider le flot ; l'optimisation des formats vient ensuite.
 
 ### D-02 🟡 Fusionner la ReLU dans la convolution
 - Aujourd'hui, `relu()` relit et réécrit toute la feature map (36 864 mots pour conv1).
@@ -344,14 +363,14 @@ void cnn(const input_t image[C0*IMG_H*IMG_W], out_t scores[N_CLASSES]) {
 
 ## Plan de migration (ordre conseillé)
 
-1. [ ] **Commit de l'état actuel** (pragma A-01 inclus), puis tag `avant-hls`.
-2. [ ] **C-06** : ajouter `--dump` à `main.cpp` et produire `hls/ref/scores_k5_200.txt` avec l'**ancien** modèle.
-3. [ ] **B-02** : écrire `hls/gen_coeffs.py`, générer `cpp/coeffs_k5.hpp` et `cpp/coeffs_k3.hpp`.
-4. [ ] **A-02 → A-05, B-01, B-03, B-04, D-02, D-05, D-07** : réécrire `utils.*` et `cnn.*` en tableaux fixes (squelette ci-dessus).
-5. [ ] **C-04, C-05** : includes `<ac_fixed.h>` + `-I hls/include`, et nettoyage des en-têtes du design.
-6. [ ] **C-09** : adapter `main.cpp` (coefficients compilés, `KS`), `CMakeLists.txt` et `runner.py` (`-DKS`).
-7. [ ] **Non-régression** : scores identiques sur les 200 images de l'étape 2, et précision inchangée sur 1000 images (`cpp/build/main 1000 5`).
+1. [x] **Commit de l'état actuel** (pragma A-01 inclus). Pas de tag : l'état d'avant est le commit `dd12d0b`.
+2. [~] **C-06** (référence faite hors dépôt) : ajouter `--dump` à `main.cpp` et produire `hls/ref/scores_k5_200.txt` avec l'**ancien** modèle.
+3. [x] **B-02** : écrire `hls/gen_coeffs.py`, générer `cpp/coeffs_k5.hpp` et `cpp/coeffs_k3.hpp`.
+4. [x] **A-02 → A-05, B-01, B-03, B-04** (D-02, D-05, D-07 restent à faire) : réécrire `utils.*` et `cnn.*` en tableaux fixes (squelette ci-dessus).
+5. [ ] **C-04** : includes `<ac_fixed.h>` + `-I hls/include` (C-05 fait au commit A).
+6. [x] **C-09** : adapter `main.cpp` (coefficients compilés, `KS`), `CMakeLists.txt` et `runner.py` (`-DKS`).
+7. [x] **Non-régression** : scores identiques sur les 200 images de l'étape 2, et précision inchangée sur 1000 images (`cpp/build/main 1000 5`).
 8. [ ] **C-01, C-07, C-08** : écrire `tb_hls.cpp` (1 à 5 images, comparaison aux scores de référence).
 9. [ ] **C-02, C-03, B-05, B-06** : écrire `hls/cnn.tcl`, puis `go analyze` / `go compile` sur la machine de l'école.
-10. [ ] **B-07, D-01** : décider la frontière HW/SW de l'entrée et la config de formats, puis `go extract` et SCVerify.
+10. [ ] `go extract` et SCVerify (B-07 et D-01 décidés le 2026-11-24 : entrée normalisée, config large).
 11. [ ] **D-03, D-04, D-06, D-08** : optimisations selon les rapports de Catapult (surface, latence, BRAM).

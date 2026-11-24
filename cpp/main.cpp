@@ -3,11 +3,9 @@
 #include <string>
 #include <cstdlib>
 #include <fstream>
-#include <map>
 #include "config.hpp"
 #include "utils.hpp"
 #include "cnn.hpp"
-#include "extract_coeff.hpp"
 #include "read_image.hpp"
 
 using namespace std;
@@ -35,6 +33,7 @@ static void print_format(const string& name, int W, int I, bool S) {
  *                 marge = score(label) - meilleur score des autres classes (< 0 si erreur)
  *
  * Max-pool fixé à 3x3, pas de 2. Formats virgule fixe : config.hpp
+ * Coefficients compilés dans le binaire (ROM cpp/coeffs_k3.hpp / coeffs_k5.hpp, hls/gen_coeffs.py)
  */
 int main(int argc, char** argv) {
 
@@ -62,7 +61,6 @@ int main(int argc, char** argv) {
 
     const string root      = PROJECT_ROOT;
     const string data_dir  = root + "/data/cifar-10-batches-bin/";
-    const string coef_path = root + "/data/coef/CNN_coeff_" + to_string(k_size) + "x" + to_string(k_size) + ".txt";
     const string img_path  = data_dir + batch;
 
     cout << "Formats :" << endl;
@@ -92,24 +90,6 @@ int main(int argc, char** argv) {
     print_acc("accfc", ACCFC_W, ACCFC_I);
 
     try {
-        //=== COEFFICIENTS ===//
-        // static : 74 000 valeurs, hors de la pile
-        static ker1_t  ker1[K1_SIZE];  static bias1_t bia1[C1];
-        static ker2_t  ker2[K2_SIZE];  static bias2_t bia2[C2];
-        static ker3_t  ker3[K3_SIZE];  static bias3_t bia3[C3];
-        static fck_t   fck[FCK_SIZE];  static fcb_t   fcb[N_CLASSES];
-        {
-            map<string, Tensor> tensors = parse_tensors(coef_path);
-            to_kernel(get_tensor(tensors, "conv1/weights", 4), C1, IN_C, KS, ker1);
-            to_array (get_tensor(tensors, "conv1/biases",  1), C1, bia1);
-            to_kernel(get_tensor(tensors, "conv2/weights", 4), C2, C1, KS, ker2);
-            to_array (get_tensor(tensors, "conv2/biases",  1), C2, bia2);
-            to_kernel(get_tensor(tensors, "conv3/weights", 4), C3, C2, KS, ker3);
-            to_array (get_tensor(tensors, "conv3/biases",  1), C3, bia3);
-            to_array (get_tensor(tensors, "local3/weights", 2), FCK_SIZE, fck);
-            to_array (get_tensor(tensors, "local3/biases",  1), N_CLASSES, fcb);
-        }
-
         //=== IMAGES ===//
         int n_images = count_images(img_path);
 
@@ -138,7 +118,7 @@ int main(int argc, char** argv) {
             to_image(raw, image);
 
             out_t scores[N_CLASSES];
-            cnn(image, ker1, bia1, ker2, bia2, ker3, bia3, fck, fcb, scores);
+            cnn(image, scores);
 
             int best = 0;
             for (int j = 1; j < N_CLASSES; j++)

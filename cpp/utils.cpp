@@ -80,37 +80,42 @@ void convolution_feature(
 }
 
 // ============================================================
-// Matrix accumulation
+// Perceptron
 // ============================================================
 
 template <
-    int M, int N,
+    int C, int H, int WD, int N,
     int W_acc, int I_acc,
     int W_a, int I_a, bool S_a,
     int W_m, int I_m, bool S_m,
     int W_c, int I_c, bool S_c,
     int W_o, int I_o, bool S_o
 >
-void m_acc(
-    const ac_fixed<W_a, I_a, S_a> A[M],
-    const ac_fixed<W_m, I_m, S_m> B[M * N],
-    const ac_fixed<W_c, I_c, S_c> C[N],
+void m_acc_hwc(
+    const ac_fixed<W_a, I_a, S_a> A[C * H * WD],
+    const ac_fixed<W_m, I_m, S_m> B[C * H * WD * N],
+    const ac_fixed<W_c, I_c, S_c> Cb[N],
     ac_fixed<W_o, I_o, S_o>       S[N]
 ) {
-    // S_j = sum_k A_k * B_{k,j} + C_j
+    // S_j = sum_f A_f * B_{f,j} + C_j     avec f = (row*W + col)*C + chan (ordre HWC)
     typedef typename ac_fixed<W_a, I_a, S_a>::template rt<W_m, I_m, S_m>::mult mult_t;
     constexpr int G      = 8;
     constexpr int F_auto = AC_MAX(mult_t::width - mult_t::i_width, W_c - I_c);
     constexpr int I_auto = AC_MAX(mult_t::i_width + G, I_c) + 1;
     typedef ac_fixed<(W_acc > 0 ? W_acc : I_auto + F_auto), (W_acc > 0 ? I_acc : I_auto), true> acc_t;
 
-    // Boucle k externe, j interne : B est parcourue ligne par ligne (contiguë)
     acc_t acc[N];
     for (int j = 0; j < N; j++)
-        acc[j] = C[j];
-    for (int k = 0; k < M; k++)
-        for (int j = 0; j < N; j++)
-            acc[j] += A[k] * B[k * N + j];
+        acc[j] = Cb[j];
+    // row, col, chan : f croît de 1 à chaque itération ; B est parcourue ligne par ligne (contiguë)
+    for (int row = 0; row < H; row++)
+        for (int col = 0; col < WD; col++)
+            for (int chan = 0; chan < C; chan++) {
+                const int f = (row * WD + col) * C + chan;
+                const ac_fixed<W_a, I_a, S_a> a = A[(chan * H + row) * WD + col];
+                for (int j = 0; j < N; j++)
+                    acc[j] += a * B[f * N + j];
+            }
 
     for (int j = 0; j < N; j++)
         S[j] = acc[j];
@@ -124,32 +129,27 @@ void m_acc(
 
 template <
     int C, int H, int WD,
-    int OH, int OW,
     int W_i, int I_i, bool S_i,
     int W_o, int I_o, bool S_o
 >
 void max_pool(
     const ac_fixed<W_i, I_i, S_i> img[C * H * WD],
-    ac_fixed<W_o, I_o, S_o>       img_o[C * OH * OW],
-    int size,
-    int stride,
-    bool centered
+    ac_fixed<W_o, I_o, S_o>       img_o[C * (H / POOL_STRIDE) * (WD / POOL_STRIDE)]
 ) {
-    // centered = false : fenêtre [i*stride, i*stride + size - 1]   (TF 'SAME', réseau entraîné ainsi)
-    // centered = true  : fenêtre [i*stride - size/2, i*stride + size/2]
-    const int off = centered ? -(size / 2) : 0;
+    constexpr int OH = H / POOL_STRIDE;
+    constexpr int OW = WD / POOL_STRIDE;
 
     for (int chan = 0; chan < C; chan++)
         for (int row = 0; row < OH; row++)
             for (int col = 0; col < OW; col++) {
                 const ac_fixed<W_i, I_i, S_i>* plane = img + chan * H * WD;
                 // Le pixel (row*stride, col*stride) est toujours dans l'image : bonne valeur initiale
-                ac_fixed<W_i, I_i, S_i> max_value = get_valid_pixel<H, WD>(plane, row * stride, col * stride);
-                for (int m = 0; m < size; m++)
-                    for (int n = 0; n < size; n++) {
+                ac_fixed<W_i, I_i, S_i> max_value = get_valid_pixel<H, WD>(plane, row * POOL_STRIDE, col * POOL_STRIDE);
+                for (int m = 0; m < POOL_SIZE; m++)
+                    for (int n = 0; n < POOL_SIZE; n++) {
                         // Hors image -> 0, comme en Python (sans effet après ReLU car tout est >= 0)
                         ac_fixed<W_i, I_i, S_i> v =
-                            get_valid_pixel<H, WD>(plane, row * stride + m + off, col * stride + n + off);
+                            get_valid_pixel<H, WD>(plane, row * POOL_STRIDE + m, col * POOL_STRIDE + n);
                         if (v > max_value)
                             max_value = v;
                     }

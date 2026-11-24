@@ -43,17 +43,13 @@
 
 /*
  * Fonction synthétisée par Catapult (top).
- *     image  : image rognée et normalisée, rangée [C][H][W]
- *     ker*   : noyaux [C_out][C_in][KS][KS] ; bia* : biais
- *     fck    : poids du perceptron (180 x 10, ligne par ligne, entrées dans l'ordre HWC) ; fcb : biais
+ *     image  : image rognée (24x24) et normalisée, rangée [C][H][W] ; rognage et normalisation
+ *              sont faits hors du matériel (testbench / ARM), voir hls/AUDIT_HLS.md B-07
  *     scores : scores des 10 classes (sortie)
+ * Les coefficients sont des ROM internes (coeffs_k3.hpp / coeffs_k5.hpp, générés par hls/gen_coeffs.py).
  */
 void cnn(
     const input_t image[IN_SIZE],
-    const ker1_t  ker1[K1_SIZE],  const bias1_t bia1[C1],
-    const ker2_t  ker2[K2_SIZE],  const bias2_t bia2[C2],
-    const ker3_t  ker3[K3_SIZE],  const bias3_t bia3[C3],
-    const fck_t   fck[FCK_SIZE],  const fcb_t   fcb[N_CLASSES],
     out_t         scores[N_CLASSES]
 );
 

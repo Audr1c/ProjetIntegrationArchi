@@ -31,7 +31,7 @@ class Runner:
     def prepare(self):
         """Objets communs (indépendants des formats), recompilés seulement si le code change."""
         newest = max(p.stat().st_mtime for p in paths.CPP.glob("*.[ch]pp"))
-        for src in ("extract_coeff.cpp", "read_image.cpp"):
+        for src in ("read_image.cpp",):
             obj = paths.BUILD / "obj" / src.replace(".cpp", ".o")
             if obj.exists() and obj.stat().st_mtime >= newest:
                 continue
@@ -89,7 +89,7 @@ class Runner:
             t0 = time.time()
             cmd = [paths.CXX, *paths.CXXFLAGS, *self.defines(config), f"-DKS={k}", "-I", str(paths.CPP),
                    str(paths.CPP / "main.cpp"), str(paths.CPP / "cnn.cpp"),
-                   str(paths.BUILD / "obj" / "extract_coeff.o"), str(paths.BUILD / "obj" / "read_image.o"),
+                   str(paths.BUILD / "obj" / "read_image.o"),
                    "-o", str(exe)]
             # start_new_session : le Ctrl-C du terminal ne tue pas les enfants, c'est nous qui les arrêtons
             r = subprocess.run(cmd, capture_output=True, text=True, start_new_session=True)

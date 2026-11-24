@@ -18,7 +18,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # utils.cpp ne contient que des templates : il est inclus par utils.hpp
 # et n'est pas compilé à part.
-add_executable(main ./main.cpp ./cnn.cpp ./extract_coeff.cpp ./read_image.cpp)
+# Coefficients : ROM compilées (coeffs_k5.hpp, ou coeffs_k3.hpp avec -DKS=3)
+#   cmake -DCMAKE_CXX_FLAGS="-DKS=3" ..
+add_executable(main ./main.cpp ./cnn.cpp ./read_image.cpp)
 
 # Racine du dépôt, pour trouver data/ quel que soit le dossier de lancement
 target_compile_definitions(main PRIVATE "PROJECT_ROOT=\"${CMAKE_SOURCE_DIR}/..\"")

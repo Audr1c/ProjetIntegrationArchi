@@ -1,26 +1,53 @@
 #include "cnn.hpp"
 
 
-// Aplatissement avant le perceptron.
-// L'image est rangée en [C][H][W] mais les poids "local3/weights" ont été appris
-// sur reshape(180) d'une image (H, W, C) : on aplatit donc dans l'ordre HWC.
-template <int C, int H, int WD, int W, int I, bool S>
-static void flatten_hwc(const ac_fixed<W, I, S> img[C * H * WD], ac_fixed<W, I, S> out[C * H * WD]) {
-    for (int chan = 0; chan < C; chan++)
-        for (int row = 0; row < H; row++)
-            for (int col = 0; col < WD; col++)
-                out[(row * WD + col) * C + chan] = img[(chan * H + row) * WD + col];
-}
+/*
+ * ROM des coefficients (coeffs_k3.hpp / coeffs_k5.hpp, générés par hls/gen_coeffs.py) :
+ *     CNN_ROM_BEGIN(type, nom, taille)  valeurs...  CNN_ROM_END(type, nom, taille)
+ *
+ * Synthèse (__SYNTHESIS__, défini par Catapult) : static const <type> nom[taille] = {...};
+ *     tableau constant local à la fonction top -> ROM ; conversion double -> ac_fixed faite par l'outil.
+ * PC : les mêmes littéraux dans un tableau double (données brutes : compilation rapide), convertis
+ *     une seule fois au premier appel par le même constructeur ac_fixed(double) -> valeurs identiques.
+ *     (Initialiser directement 74 000 ac_fixed coûte ~40 s et 1,3 Go de compilation à g++.)
+ */
+#ifdef __SYNTHESIS__
+
+#define CNN_ROM_BEGIN(T, name, size)  static const T name[size] = {
+#define CNN_ROM_END(T, name, size)    };
+
+#else
+
+template <class T, int N>
+struct RomCopy {
+    T v[N];
+    explicit RomCopy(const double (&d)[N]) {
+        for (int i = 0; i < N; i++)
+            v[i] = T(d[i]);
+    }
+};
+
+#define CNN_ROM_BEGIN(T, name, size)  static const double name##_d[size] = {
+#define CNN_ROM_END(T, name, size)    };                                            \
+                                      static const RomCopy<T, size> name##_rom(name##_d); \
+                                      const T* const name = name##_rom.v;
+
+#endif
+
 
 #pragma hls_design top
 void cnn(
     const input_t image[IN_SIZE],
-    const ker1_t  ker1[K1_SIZE],  const bias1_t bia1[C1],
-    const ker2_t  ker2[K2_SIZE],  const bias2_t bia2[C2],
-    const ker3_t  ker3[K3_SIZE],  const bias3_t bia3[C3],
-    const fck_t   fck[FCK_SIZE],  const fcb_t   fcb[N_CLASSES],
     out_t         scores[N_CLASSES]
 ) {
+    // Coefficients ker1, bia1, ..., fck, fcb : ROM (voir CNN_ROM_BEGIN plus haut).
+    // Définis dans la fonction top et non en global (manuel Catapult §6.1.2).
+#if KS == 5
+#include "coeffs_k5.hpp"
+#else
+#include "coeffs_k3.hpp"
+#endif
+
     // Feature maps intermédiaires : mémoires internes.
     // static : hors de la pile (conv1 = 36 864 valeurs), sans effet sur le matériel.
     static conv1_t image2[C1 * IN_H * IN_WD];
@@ -29,14 +56,13 @@ void cnn(
     static pool2_t image5[C2 * P2_H * P2_H];
     static conv3_t image6[C3 * P2_H * P2_H];
     static pool3_t image7[C3 * P3_H * P3_H];
-    static pool3_t image8[FC_IN];
 
     //=== 1ST CONV ===//                                  24x24x3 -> 24x24x64
     convolution_feature<IN_C, IN_H, IN_WD, C1, KS, ACC1_W, ACC1_I>(image, ker1, bia1, image2);
     relu<C1 * IN_H * IN_WD>(image2);
 
     //=== 1ST MAX POOL ===//                              -> 12x12x64
-    max_pool<C1, IN_H, IN_WD, P1_H, P1_H>(image2, image3);
+    max_pool<C1, IN_H, IN_WD>(image2, image3);
 
 
     //=== 2ND CONV ===//                                  -> 12x12x32
@@ -44,7 +70,7 @@ void cnn(
     relu<C2 * P1_H * P1_H>(image4);
 
     //=== 2ND MAX POOL ===//                              -> 6x6x32
-    max_pool<C2, P1_H, P1_H, P2_H, P2_H>(image4, image5);
+    max_pool<C2, P1_H, P1_H>(image4, image5);
 
 
     //=== 3RD CONV ===//                                  -> 6x6x20
@@ -52,11 +78,9 @@ void cnn(
     relu<C3 * P2_H * P2_H>(image6);
 
     //=== 3RD MAX POOL ===//                              -> 3x3x20
-    max_pool<C3, P2_H, P2_H, P3_H, P3_H>(image6, image7);
+    max_pool<C3, P2_H, P2_H>(image6, image7);
 
 
-    //=== PERCEPTRON ===//                                180 -> 10
-    flatten_hwc<C3, P3_H, P3_H>(image7, image8);
-
-    m_acc<FC_IN, N_CLASSES, ACCFC_W, ACCFC_I>(image8, fck, fcb, scores);
+    //=== PERCEPTRON ===//                                180 -> 10, entrée lue dans l'ordre HWC
+    m_acc_hwc<C3, P3_H, P3_H, N_CLASSES, ACCFC_W, ACCFC_I>(image7, fck, fcb, scores);
 }

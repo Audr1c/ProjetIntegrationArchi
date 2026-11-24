@@ -70,42 +70,48 @@ void convolution_feature(
 
 
 // ============================================================
-// Matrix accumulation : S = A x B + C
+// Perceptron : S = flatten_HWC(A) x B + C
 // ============================================================
 
-// Accumulateur : comme convolution_feature (W_acc = 0 -> automatique, 8 bits de garde = ceil(log2(180)))
+/*
+ * A est une feature map rangée [C][H][W], mais les poids du perceptron ont été appris sur
+ * reshape(180) d'une image (H, W, C) : A est lue directement dans l'ordre HWC (pas de copie),
+ * indice aplati f = (row*W + col)*C + chan, croissant comme dans l'ancien flatten_hwc
+ * -> même ordre d'accumulation, résultat identique même avec un accumulateur tronqué.
+ * Accumulateur : comme convolution_feature (W_acc = 0 -> automatique, 8 bits de garde = ceil(log2(180)))
+ */
 template <
-    int M, int N,                       // B : M lignes (= taille de A) x N colonnes (= taille de C)
+    int C, int H, int WD, int N,        // A : [C][H][W] ; B : (C*H*W) lignes x N colonnes ; C, S : N
     int W_acc, int I_acc,               // Accumulateur (0 = automatique)
     int W_a, int I_a, bool S_a,         // Input A   (déduit)
     int W_m, int I_m, bool S_m,         // Matrix B  (déduit)
     int W_c, int I_c, bool S_c,         // Input C   (déduit)
     int W_o, int I_o, bool S_o          // Sortie S  (déduit)
 >
-void m_acc(
-    const ac_fixed<W_a, I_a, S_a> A[M],
-    const ac_fixed<W_m, I_m, S_m> B[M * N],
-    const ac_fixed<W_c, I_c, S_c> C[N],
+void m_acc_hwc(
+    const ac_fixed<W_a, I_a, S_a> A[C * H * WD],
+    const ac_fixed<W_m, I_m, S_m> B[C * H * WD * N],
+    const ac_fixed<W_c, I_c, S_c> Cb[N],
     ac_fixed<W_o, I_o, S_o>       S[N]
 );
 
 
 // ============================================================
-// Max Pool
+// Max Pool 3x3, pas de 2, mode TF 'SAME'
 // ============================================================
 
+// Fenêtre [i*2, i*2 + 2], tronquée au bord (padding à 0) : c'est ainsi que le réseau a été appris.
+#define POOL_SIZE   3
+#define POOL_STRIDE 2
+
 template <
-    int C, int H, int WD,               // Image input (explicites)
-    int OH, int OW,                     // Image output (explicites)
+    int C, int H, int WD,               // Image input (explicites) ; sortie [C][H/2][W/2]
     int W_i, int I_i, bool S_i,         // Image input  (déduit)
     int W_o, int I_o, bool S_o          // Image output (déduit)
 >
 void max_pool(
     const ac_fixed<W_i, I_i, S_i> img[C * H * WD],
-    ac_fixed<W_o, I_o, S_o>       img_o[C * OH * OW],
-    int size = 3,
-    int stride = 2,
-    bool centered = false
+    ac_fixed<W_o, I_o, S_o>       img_o[C * (H / POOL_STRIDE) * (WD / POOL_STRIDE)]
 );
 
 

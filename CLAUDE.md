@@ -15,7 +15,7 @@ Langue du projet : **français** (commentaires, messages, docstrings, commits, d
 | 1. Référence Python | `python/` : CNN boucles + version numpy vectorisée, lecture CIFAR/coefs, mesure de dynamique | ✅ fini |
 | 2a. C++ virgule fixe | `cpp/` : même réseau en `ac_fixed<W,I,S>`, formats dans `cpp/config.hpp` | ✅ fini, ~89 % sur 200 img |
 | 2b. Exploration des formats | `Exploration/` : recherche auto du nb de bits minimal par format | ✅ 12 runs complets (+2 anciens), **non commité** (`?? Exploration/`) |
-| 2c. HLS Catapult | `hls/` : ne contient que `include/ac_fixed.h`, `ac_int.h` | ⏳ pas commencé |
+| 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A-01…D-08) ; code C++ rendu synthétisable (étapes A et B, bit-exact) | 🔄 en cours : reste C (testbench SCVerify, Tcl) et D |
 | 3. FPGA Vivado / Zybo Z7 | `fpga/` vide | ⏳ pas commencé |
 | Rapport | `rapport/` vide | ⏳ pas commencé |
 
@@ -53,13 +53,13 @@ python/            référence algorithmique (UNIQUEMENT des .py, vérifié par 
   utils.py         conv/relu/max_pool/macc en boucles Python (modèle « matériel », lent)
   cnn.py           cnn() en boucles ; cnn_fast.py : même réseau vectorisé numpy (~1000x plus rapide)
   amplitude.py     AmplitudeStats : histogramme log2 de |x| par étape → propose ac_fixed<W,I,S>
-cpp/               modèle C++17 virgule fixe (testbench + calcul dans le même exécutable pour l'instant)
-  config.hpp       TOUS les formats : macros X_W / X_I (#ifndef → surchargeables par -D) + typedefs
-  utils.hpp/.cpp   types imageT/kernelT/biasT/matrix2 + relu, convolution_feature, m_acc, max_pool (templates)
-  cnn.hpp/.cpp     struct CnnCoeffs + cnn(image, coef) → vector<out_t>(10)
-  extract_coeff.*  parse_tensors en C++ + to_kernel/to_bias/to_matrix/to_vector (conversion → ac_fixed)
-  read_image.*     load_image(path, n) → RawImage (double, CHW, crop+normalize), to_image<W,I,S>
-  main.cpp         CLI : ./main [nb_images=100] [k=5] [batch=data_batch_1.bin] [--order F] [--trace]
+cpp/               modèle C++ virgule fixe ; partie synthétisable (cnn.cpp, utils.*, coeffs_k*.hpp) + testbench PC
+  config.hpp       TOUS les formats : macros X_W / X_I (#ifndef → surchargeables par -D) + typedefs (regénéré par explore.py)
+  utils.hpp/.cpp   templates sur tableaux C fixes : relu, convolution_feature, m_acc_hwc (perceptron), max_pool 3x3/2
+  cnn.hpp/.cpp     KS (taille noyau, -DKS=3) + dimensions ; top Catapult cnn(input_t image[1728], out_t scores[10])
+  coeffs_k3/k5.hpp ROM des coefficients, GÉNÉRÉES par hls/gen_coeffs.py, incluses DANS cnn() (macros CNN_ROM_*)
+  read_image.*     load_image(path, n) → RawImage (double, CHW, crop+normalize), to_image(raw, tableau)
+  main.cpp         CLI : ./main [nb_images=100] [k=5] [batch=data_batch_1.bin] [--order F] [--trace] ; k doit valoir KS
   CMakeLists.txt   cible `main`, Release par défaut, définit PROJECT_ROOT
 Exploration/       outil d'exploration bits/précision (Python + rich), voir plus bas
   explore.py       point d'entrée (docstring = doc complète des options)
@@ -76,6 +76,9 @@ data/              CIFAR-10 binaire (ignoré par git, ~180 Mo) ; data/coef/ vers
 doc/               SEI_CNN.pdf (sujet, 61 p.), BoiteAOutilsHLSImage.pdf (Catapult/Vivado/Zybo, 42 p.),
                    ac_datatypes_ref.pdf ; doc/hls/ (ignoré) : bluebook HLS, ref Catapult, scripts d'env école
 hls/include/       ac_fixed.h, ac_int.h (Mentor/Siemens AC datatypes) — inclus par cpp/config.hpp
+hls/AUDIT_HLS.md   audit du passage à Catapult : codes A (bloquant) B (structure) C (testbench/flot) D (QoR), plan
+hls/gen_coeffs.py  data/coef/*.txt → cpp/coeffs_k3.hpp, coeffs_k5.hpp (texte des nombres recopié tel quel)
+hls/Demo_FIR/      démo Catapult de l'encadrant (FIR) ; hls/demoFir.tcl : script de la démo
 fpga/ rapport/ build/   vides (.gitkeep)
 ```
 
@@ -105,10 +108,10 @@ on peut lancer depuis n'importe quel dossier.
 
 | | Python | C++ |
 |---|---|---|
-| image / feature map | `(H, W, C)` HWC | `imageT.value[(c*H + r)*W + k]` **CHW** |
-| noyau | `(M, N, L, C)` comme le fichier | `kernelT.value[((c*L + l)*M + m)*N + n]` (réordonné par `to_kernel`) |
-| matrice FC | `(180, 10)` | `matrix2.value[k*N + j]`, ligne par ligne |
-| flatten avant FC | `reshape(180)` HWC | `flatten_hwc()` dans cnn.cpp : **doit rester HWC** sinon les poids FC ne collent plus |
+| image / feature map | `(H, W, C)` HWC | tableau `x[(c*H + r)*W + k]` **CHW** |
+| noyau | `(M, N, L, C)` comme le fichier | `ker[((c*L + l)*M + m)*N + n]` (réordonné par `hls/gen_coeffs.py`) |
+| matrice FC | `(180, 10)` | `fck[k*N + j]`, ligne par ligne |
+| flatten avant FC | `reshape(180)` HWC | pas de copie : `m_acc_hwc` lit la carte CHW dans l'ordre **HWC** (sinon les poids FC ne collent plus) |
 
 ## Virgule fixe (`cpp/config.hpp`)
 
@@ -133,8 +136,8 @@ on peut lancer depuis n'importe quel dossier.
    on garde la plus petite valeur avec précision ≥ référence − seuil (1 pt). `--parallel-vars P` descend P variables à la fois.
 4. **Arrêt anticipé** (`explo/monitor.py:PairedMonitor`) : comparaison appariée image par image avec la référence,
    borne statistique (z=2) → on tue les candidats perdus d'avance.
-- Chaque évaluation = compilation de `cpp/main.cpp + cpp/cnn.cpp` avec `-D<NOM>_W/_I` + objets communs
-  (`extract_coeff.o`, `read_image.o`) puis `main N k batch --trace --order order.txt`.
+- Chaque évaluation = compilation de `cpp/main.cpp + cpp/cnn.cpp` avec `-D<NOM>_W/_I -DKS=<k>` + objet commun
+  `read_image.o`, puis `main N k batch --trace --order order.txt`.
 - **Cache** `runs/cache.jsonl` indexé par sha1(code C++ hors config.hpp, k, n, batch, config) : modifier
   n'importe quel `cpp/*.?pp` (sauf config.hpp) invalide tout le cache (hash actuel `c44f86cd67` = celui des runs).
 - Métrique en abscisse : bits moyens par valeur pondérés par le stockage (`mem`) ou par les lectures (`ops`).
@@ -152,6 +155,13 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
 - `python/main.py` : `slow = True` lance aussi la version boucles (très lente) ; `max_count = 10` images seulement.
 - `cpp/utils.cpp` n'est **pas** compilé à part : il est `#include` à la fin de `utils.hpp` (templates).
 - Ajouter un `.cpp` au modèle ⇒ mettre à jour `cpp/CMakeLists.txt` **et** `Exploration/explo/runner.py` (liste de compilation codée en dur).
+- `KS` est fixé à la compilation (défaut 5, dans `cnn.hpp`, pas dans `config.hpp` qui est regénéré) : `main` refuse un
+  `k` différent ; build 3x3 : `cmake -DCMAKE_CXX_FLAGS=-DKS=3`.
+- Coefficients modifiés dans `data/coef/` ⇒ relancer `.venv/bin/python hls/gen_coeffs.py`. Les ROM sont en
+  `static const double` sur PC (converties au 1er appel) et en `static const ac_fixed` sous `__SYNTHESIS__` :
+  g++ met ~40 s / 1,3 Go à compiler la version `__SYNTHESIS__`, ne pas l'utiliser hors Catapult.
+- La partie synthétisable (cnn.cpp, utils.*, coeffs) : pas de `std::`, pas d'allocation, dimensions constantes.
+  Toute modification doit rester **bit-exacte** (même ordre d'accumulation, quantification avant ReLU).
 - Ajouter un format ⇒ `config.hpp`, `main.cpp` (print_format), `cnn.*`, **et** `Exploration/explo/formats.py:FORMATS` + `usage_counts`.
 - `make tree-check` échoue si un fichier non listé dans `ROOT_OK` (Makefile) est à la racine : tout nouveau
   fichier racine doit y être ajouté. Il ignore les périphériques caractère (dotfiles fantômes du sandbox Claude).
@@ -164,9 +174,10 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
 
 ## Pour la suite (phase HLS / FPGA)
 
-- **`std::vector` n'est pas synthétisable par Catapult** : `imageT`, `kernelT`… devront passer en tableaux de
-  taille fixe (ou `ac_channel`), et le calcul être séparé du testbench (lecture fichiers, boucle d'images).
-- Coefficients : les passer en constantes (tableaux `static const` générés) ou par mémoire/AXI.
+- Suivre `hls/AUDIT_HLS.md` : A et B faits (tableaux fixes, top `cnn(image, scores)`, coefficients en ROM).
+  Frontière HW/SW décidée : rognage + normalisation hors matériel (testbench / ARM). Config de formats : large
+  (16 bits) pour l'instant, optimisation plus tard (D-01). B-06 (budget BRAM) reporté.
+- Prochaine étape : C (testbench SCVerify `CCS_MAIN`/`CCS_DESIGN`, script Tcl, includes `<ac_fixed.h>`).
 - Outils école : Catapult 10.5c, Questa, Precision, Vivado 2017.1 (scripts d'environnement dans `doc/hls/bash_*`,
   chemins `/softslin/...`). Cible : Zybo Z7 (Zynq), canevas de plateformes fournis par l'encadrant
   (`/tp-fmr/smancini/SEI_SoC_CNN/`). Méthodo HLS + plateformes : `doc/BoiteAOutilsHLSImage.pdf`.
