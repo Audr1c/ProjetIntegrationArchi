@@ -6,7 +6,12 @@
  * CNN_ROM_BEGIN / CNN_ROM_END : définies dans cnn.cpp (ROM ac_fixed en synthèse, double sur PC).
  * Valeurs recopiées du fichier texte, converties en ac_fixed dans les formats de config.hpp.
  * Noyaux rangés [C_out][C_in][K][K], perceptron [180][10].
+ *
+ * #ifdef CNN_ROM_BEGIN : compilé seul (Catapult compile chaque fichier du projet séparément),
+ * l'en-tête est vide et valide.
  */
+
+#ifdef CNN_ROM_BEGIN
 
 CNN_ROM_BEGIN(ker1_t, ker1, K1_SIZE)   // 1728 valeurs
     7.76161611e-01, 9.60672736e-01, 5.01330853e-01, -8.39314014e-02, 8.49607587e-02, -2.36998945e-01, -7.01947451e-01, -4.98236030e-01,
@@ -3513,3 +3518,5 @@ CNN_ROM_BEGIN(fcb_t, fcb, N_CLASSES)   // 10 valeurs
     1.33150375, -0.05496363, 1.30825186, 2.52893686, 1.00788128, 2.28100443, 1.75292468, 1.02082717,
     0.45848575, 0.17053629,
 CNN_ROM_END(fcb_t, fcb, N_CLASSES)
+
+#endif // CNN_ROM_BEGIN

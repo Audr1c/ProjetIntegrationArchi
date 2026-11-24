@@ -83,7 +83,12 @@ def generate(k):
         " * CNN_ROM_BEGIN / CNN_ROM_END : définies dans cnn.cpp (ROM ac_fixed en synthèse, double sur PC).",
         " * Valeurs recopiées du fichier texte, converties en ac_fixed dans les formats de config.hpp.",
         " * Noyaux rangés [C_out][C_in][K][K], perceptron [180][10].",
+        " *",
+        " * #ifdef CNN_ROM_BEGIN : compilé seul (Catapult compile chaque fichier du projet séparément),",
+        " * l'en-tête est vide et valide.",
         " */",
+        "",
+        "#ifdef CNN_ROM_BEGIN",
         "",
     ]
     for tname, cname, ctype, csize in LAYERS:
@@ -93,6 +98,7 @@ def generate(k):
                 sys.exit(f"{src} : {tname} de forme {t.shape}, noyau {k}x{k} attendu")
             t = t.transpose(3, 2, 0, 1)          # (M, N, L, C) -> (C, L, M, N)
         out += [c_array(ctype, cname, csize, list(t.reshape(-1))), ""]
+    out += ["#endif // CNN_ROM_BEGIN", ""]
     dst = os.path.join(ROOT, "cpp", f"coeffs_k{k}.hpp")
     with open(dst, "w") as f:
         f.write("\n".join(out))

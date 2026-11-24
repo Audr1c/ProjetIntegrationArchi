@@ -44,7 +44,9 @@ solution options set /Input/CppStandard c++11
 # Pas de -I vers hls/include : Catapult doit utiliser SES AC datatypes (AUDIT C-04).
 # Pas de -I vers cpp/ non plus : tous les includes du projet sont relatifs ("../cpp/…").
 solution options set /Input/SearchPath /usr/include/x86_64-linux-gnu/
-options set Input/CompilerFlags "-DKS=$KS"
+# Au niveau de la SOLUTION : « options set Input/CompilerFlags » ne règle que la valeur globale par défaut,
+# non reportée sur la solution déjà créée (-DKS absent de la ligne « Front End called with arguments »)
+solution options set /Input/CompilerFlags "-DKS=$KS"
 solution options set /Output/OutputVerilog false      ;# RTL en VHDL, comme la démo
 flow package require /SCVerify
 
@@ -55,7 +57,8 @@ solution file add [file join $CPP cnn.hpp]            -type CHEADER
 solution file add [file join $CPP config.hpp]         -type CHEADER
 solution file add [file join $CPP utils.hpp]          -type CHEADER
 solution file add [file join $CPP utils.cpp]          -type CHEADER   ;# templates, inclus par utils.hpp
-solution file add [file join $CPP coeffs_k$KS.hpp]    -type CHEADER   ;# ROM, incluses dans cnn()
+# coeffs_k$KS.hpp N'EST PAS ajouté : Catapult compile chaque fichier du projet séparément, et les ROM
+# n'ont de sens qu'incluses dans le corps de cnn() (#include dans cnn.cpp, trouvé par Catapult).
 # Testbench : exclu de la synthèse, compilé par SCVerify
 solution file add [file join $HLS tb_hls.cpp]         -type C++     -exclude true
 solution file add [file join $CPP read_image.cpp]     -type C++     -exclude true

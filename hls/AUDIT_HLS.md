@@ -174,7 +174,13 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 ### C-02 🟠 Fichiers à exclure de la synthèse
 - **Constat** : `extract_coeff.cpp`, `read_image.cpp` et le testbench utilisent `map`, `string` et `fstream`. Dans `demoFir.tcl`, `FIR_SIMPLE_REFERENCE.cpp` est ajouté **sans** `-exclude` : ça passe seulement parce que le top ne l'appelle pas.
 - **Correction** : `solution file add … -type C++ -exclude true` pour tout ce qui n'est pas le design, comme dans `demo_sim.tcl`.
-- **État (commit C)** : dans [hls/cnn.tcl](cnn.tcl), `tb_hls.cpp`, `read_image.*` et `tb_common.hpp` sont en `-exclude true`. Les en-têtes du design sont ajoutés en `CHEADER`, y compris `utils.cpp` (templates inclus par `utils.hpp`) et `coeffs_k$KS.hpp`.
+- **État (commit C)** : dans [hls/cnn.tcl](cnn.tcl), `tb_hls.cpp`, `read_image.*` et `tb_common.hpp` sont en `-exclude true`. Les en-têtes du design sont ajoutés en `CHEADER`, y compris `utils.cpp` (templates inclus par `utils.hpp`).
+- **Retour du premier essai à l'école (2026-11-24)** : `go analyze` échouait sur `coeffs_k5.hpp(11): identifier "ker1_t" is undefined`. Catapult compile **chaque fichier du projet comme une unité séparée**, en-têtes compris (ligne `Front End called with arguments: …`). Corrections :
+  - `coeffs_k$KS.hpp` n'est plus ajouté au projet : il est trouvé par le `#include` de `cnn.cpp` ;
+  - le générateur entoure son contenu d'un `#ifdef CNN_ROM_BEGIN`, ce qui le rend vide et valide s'il est compilé seul ;
+  - `-DKS` passe par `solution options set /Input/CompilerFlags`, car `options set` ne touchait pas la solution déjà créée.
+
+  Tous les fichiers du design compilent maintenant seuls (vérifié avec `g++ -fsyntax-only`, avec et sans `__SYNTHESIS__`).
 
 ### C-03 🟠 Script Tcl du CNN à écrire, cible à changer
 - **Constat** : il n'existe que `demoFir.tcl` et `demo_sim.tcl`, qui ciblent un **Artix-7** (`xc7a12tcsg325-2L` / `xc7a50tcsg324-2`). La Zybo Z7 est un **Zynq-7000** (`xc7z010clg400-1` ou `xc7z020clg400-1`).
