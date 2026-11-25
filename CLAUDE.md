@@ -80,6 +80,10 @@ Exploration/       outil d'exploration bits/précision (Python + rich), voir plu
   build/           binaires temporaires de l'exploration (ignoré par git)
 Results/           rapports Markdown (précision Python, dynamique des valeurs)
 data/              CIFAR-10 binaire (ignoré par git, ~180 Mo) ; data/coef/ versionné ; SEI_data.tgz = archive source
+doc/carte/         CARTE INTERACTIVE du projet : carte.html (ouvrir dans un navigateur ; #n=<fichier>, #p=<n° parcours>)
+  gen_carte.py     la génère (make carte) : fichiers, descriptions, imports, includes, cibles make, scripts lancés
+  modele.py        partie rédigée : ROLES (1 ligne / fichier), VIRTUELS (outils, dossiers), LIENS (qui écrit quoi),
+                   IGNORES (faux positifs), PARCOURS (procédures pas à pas) ; template.html = gabarit HTML/JS
 doc/               SEI_CNN.pdf (sujet, 61 p.), BoiteAOutilsHLSImage.pdf (Catapult/Vivado/Zybo, 42 p.),
                    ac_datatypes_ref.pdf ; doc/hls/ (ignoré) : bluebook HLS, ref Catapult, scripts d'env école
 hls/include/       ac_fixed.h, ac_int.h (Mentor/Siemens AC datatypes) — inclus par cpp/config.hpp
@@ -110,7 +114,8 @@ make run             # tree-check + python/main.py (config en dur dans main(), v
 make explore ARGS="run --runs 3"      # = .venv/bin/python Exploration/explore.py run --runs 3
 make validate ARGS="<run> <run>:ref float -b test 2 [--start S -n N] [--md fichier.md]"
 make efficiency [ARGS="-s 1"]         # graphes + tableaux dans runs/efficiency/
-make tree-check      # vérifie l'arborescence imposée (liste blanche ROOT_OK dans le Makefile)
+make tree-check      # vérifie l'arborescence imposée
+make carte           # regénère doc/carte/carte.html ; make carte-hook = à chaque commit (hook git, à installer soi-même) (liste blanche ROOT_OK dans le Makefile)
 
 # HLS
 make nonreg          # non-régression bit-exacte du modèle C++ (200 img vs hls/ref/scores_k5.txt)
@@ -178,6 +183,10 @@ conv2<8,8> pool2<5,5> ker3<11,2> bias3<8,3> acc3<15,9> conv3<10,9> pool3<7,6> fc
 Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 17.7 bits : la descente gloutonne dépend beaucoup de l'ordre des variables.
 
 ## Pièges connus
+
+- **Carte du projet** : après avoir ajouté / renommé un script ou changé ce qu'il lit, écrit ou lance, compléter
+  `doc/carte/modele.py` (ROLES, LIENS, PARCOURS si une procédure change) puis `make carte`. Le générateur signale
+  les fichiers sans description et les entrées de modele.py qui ne correspondent plus à rien.
 
 - `python/main.py` a `max_pool_ksize = 5` en dur → 71 % au lieu de 87.8 %. Le réseau attend **3**. Le C++ est figé à 3x3/2 TF_SAME.
 - `python/main.py` : `slow = True` lance aussi la version boucles (très lente) ; `max_count = 10` images seulement.

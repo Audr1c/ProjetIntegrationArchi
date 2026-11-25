@@ -34,7 +34,7 @@ REQUIRED  := data/cifar-10-batches-bin/data_batch_1.bin \
              hls/include/ac_fixed.h
 
 .DEFAULT_GOAL := help
-.PHONY: help init tree tree-check venv check run explore validate efficiency coeffs nonreg tb-hls hls-report clean distclean
+.PHONY: help init tree tree-check venv check run explore validate efficiency coeffs nonreg tb-hls hls-report carte carte-hook clean distclean
 
 help: ## Affiche cette aide
 	@echo "Commandes disponibles :"
@@ -134,6 +134,19 @@ tb-hls: ## Testbench HLS sans Catapult (ARGS=nb_images, défaut 3)
 
 hls-report: ## Résumé des rapports Catapult (ARGS="hls/rapports" ou un dossier hls/work/Catapult_N)
 	$(PYTHON) hls/catapult_report.py $(or $(ARGS),hls/rapports)
+
+# ---------------- Carte du projet (doc/carte/) ----------------
+
+carte: ## Regénère la carte interactive doc/carte/carte.html (qui fait quoi, appelle qui, écrit quoi)
+	@$(PYTHON) doc/carte/gen_carte.py
+
+carte-hook: ## Installe un hook git qui regénère la carte à chaque commit (à lancer soi-même)
+	@printf '%s\n' '#!/bin/sh' \
+	  '# Installe par make carte-hook : regenere doc/carte/carte.html et l ajoute au commit' \
+	  'python3 doc/carte/gen_carte.py --quiet && git add doc/carte/carte.html || echo "carte non regeneree (sans effet sur le commit)"' \
+	  'exit 0' > .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "Hook installe : .git/hooks/pre-commit (supprimer ce fichier pour le retirer)"
 
 clean: ## Supprime les caches et build/
 	rm -rf $(SRC_DIR)/__pycache__ build/*

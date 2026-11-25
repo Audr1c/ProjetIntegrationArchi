@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carte du projet CNN → FPGA</title>
+<!-- GABARIT de doc/carte/gen_carte.py : ne pas ouvrir directement, ouvrir doc/carte/carte.html (make carte) -->
+<style>
+:root {
+  --fond: #f6f7f9; --carte: #ffffff; --texte: #1f2937; --doux: #6b7280; --bord: #d6dae1;
+  --voie: #eef0f4; --accent: #e11d48; --panneau: #ffffff; --ombre: 0 1px 3px rgba(0,0,0,.12);
+  --g-make: #475569; --g-python: #2563eb; --g-explo: #7c3aed; --g-cpp: #059669;
+  --g-hls: #ea580c; --g-outils: #0891b2; --g-donnees: #a16207;
+  --l-lance: #2563eb; --l-importe: #8b5cf6; --l-inclut: #94a3b8; --l-lit: #10b981;
+  --l-ecrit: #ef4444; --l-depend: #a8a29e; --l-synthetise: #f97316; --l-pilote: #06b6d4;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fond: #111418; --carte: #1b2027; --texte: #e5e7eb; --doux: #9ca3af; --bord: #343b46;
+          --voie: #161a20; --panneau: #171b21; --ombre: 0 1px 3px rgba(0,0,0,.5); }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--fond); color: var(--texte);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 10px 16px;
+  border-bottom: 1px solid var(--bord); background: var(--panneau); }
+header h1 { font-size: 17px; margin: 0; white-space: nowrap; }
+header .meta { color: var(--doux); font-size: 12px; }
+#recherche { padding: 6px 10px; border: 1px solid var(--bord); border-radius: 8px; background: var(--fond);
+  color: var(--texte); min-width: 220px; font-size: 14px; }
+.legende { display: flex; flex-wrap: wrap; gap: 6px; }
+.legende button, .btn { border: 1px solid var(--bord); background: var(--carte); color: var(--texte);
+  border-radius: 999px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; display: inline-flex;
+  align-items: center; gap: 6px; }
+.legende button .pastille { width: 18px; height: 3px; border-radius: 2px; }
+.legende button.off { opacity: .35; text-decoration: line-through; }
+.btn:hover, .legende button:hover { border-color: var(--doux); }
+main { display: flex; height: calc(100% - 58px); }
+#vue { flex: 1; position: relative; overflow: hidden; cursor: grab; }
+#vue.glisse { cursor: grabbing; }
+svg { width: 100%; height: 100%; display: block; user-select: none; }
+#panneau { width: 400px; border-left: 1px solid var(--bord); background: var(--panneau); overflow-y: auto;
+  padding: 16px 18px 40px; }
+#panneau h2 { font-size: 18px; margin: 4px 0 2px; word-break: break-word; }
+#panneau h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--doux);
+  margin: 18px 0 6px; }
+#panneau .chemin { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--doux); word-break: break-all; }
+#panneau .role { font-size: 15px; margin: 8px 0; }
+#panneau pre { white-space: pre-wrap; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--fond); border: 1px solid var(--bord); border-radius: 8px; padding: 10px; margin: 6px 0; }
+.puce { display: inline-block; border: 1px solid var(--bord); border-radius: 6px; padding: 2px 8px; margin: 3px 4px 3px 0;
+  font-size: 12.5px; cursor: pointer; background: var(--carte); }
+.puce:hover { border-color: var(--doux); }
+.puce small { color: var(--doux); }
+.groupe-pastille { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+.etapes { list-style: none; padding: 0; margin: 8px 0; counter-reset: e; }
+.etapes li { position: relative; padding: 8px 10px 8px 40px; border: 1px solid var(--bord); border-radius: 8px;
+  margin: 6px 0; cursor: pointer; background: var(--carte); }
+.etapes li::before { counter-increment: e; content: counter(e); position: absolute; left: 10px; top: 8px;
+  width: 22px; height: 22px; border-radius: 50%; background: var(--doux); color: #fff; font-size: 12px;
+  display: flex; align-items: center; justify-content: center; font-weight: 600; }
+.etapes li.courante { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.etapes li.courante::before { background: var(--accent); }
+.etapes li b { display: block; font-size: 13px; }
+.etapes li span { font-size: 12.5px; color: var(--doux); }
+.avert { color: var(--accent); font-size: 12.5px; }
+a { color: var(--l-lance); }
+.liste-parcours button { display: block; width: 100%; text-align: left; margin: 6px 0; border: 1px solid var(--bord);
+  background: var(--carte); color: var(--texte); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 13.5px; }
+.liste-parcours button small { display: block; color: var(--doux); font-size: 12px; }
+.liste-parcours button:hover { border-color: var(--accent); }
+.nav { display: flex; gap: 8px; margin: 8px 0; }
+.aide { position: absolute; left: 12px; bottom: 10px; font-size: 12px; color: var(--doux);
+  background: var(--panneau); border: 1px solid var(--bord); border-radius: 8px; padding: 6px 10px; }
+/* SVG */
+.voie-fond { fill: var(--voie); }
+.voie-titre { fill: var(--doux); font-size: 13px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.noeud rect.corps { fill: var(--carte); stroke: var(--bord); stroke-width: 1; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.10)); }
+.noeud.non-doc rect.corps { stroke-dasharray: 4 3; stroke: var(--doux); }
+.noeud .titre { font-size: 13px; font-weight: 600; fill: var(--texte); }
+.noeud .sous { font-size: 11px; fill: var(--doux); }
+.noeud .genre { font-size: 10px; fill: var(--doux); text-anchor: end; font-family: ui-monospace, monospace; }
+.noeud { cursor: pointer; transition: opacity .15s; }
+.noeud:hover rect.corps { stroke: var(--doux); }
+.noeud.choisi rect.corps { stroke: var(--accent); stroke-width: 2.5; }
+.noeud.trouve rect.corps { stroke: var(--accent); stroke-width: 2; }
+.lien { fill: none; stroke-width: 1.3; opacity: .32; transition: opacity .15s; }
+.lien.fort { stroke-width: 2.6; opacity: 1; }
+.lien.depend { stroke-dasharray: 5 4; }
+.terne { opacity: .12 !important; }
+.lien.terne { opacity: .05 !important; }
+.badge circle { fill: var(--accent); }
+.badge text { fill: #fff; font-size: 12px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.trace-parcours { fill: none; stroke: var(--accent); stroke-width: 3; stroke-dasharray: 8 6; opacity: .9; }
+.etiquette-lien { font-size: 11px; fill: var(--texte); paint-order: stroke; stroke: var(--fond); stroke-width: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Carte du projet CNN → FPGA</h1>
+  <input id="recherche" type="search" placeholder="Chercher un fichier, un rôle…  ( / )" autocomplete="off">
+  <div class="legende" id="legende"></div>
+  <button class="btn" id="recentrer" title="Tout afficher">⤢ Tout voir</button>
+  <span class="meta" id="meta"></span>
+</header>
+<main>
+  <div id="vue">
+    <svg id="svg">
+      <defs id="defs"></defs>
+      <g id="monde"><g id="voies"></g><g id="liens"></g><g id="trace"></g><g id="noeuds"></g><g id="badges"></g><g id="etiquettes"></g></g>
+    </svg>
+    <div class="aide">Survol : voisins · Clic : détails · Glisser : déplacer · Molette : zoom · Échap : réinitialiser</div>
+  </div>
+  <aside id="panneau"></aside>
+</main>
+<script>
+const D = /*__DONNEES__*/null;
+
+// ---------------------------------------------------------------- constantes
+const W = 214, H = 48, GY = 14, VOIE = 300, MARGE = 43, HAUT = 64;
+const NOMS_TYPES = { lance: "lance / exécute", importe: "importe", inclut: "inclut", lit: "lit",
+  ecrit: "écrit / génère", depend: "dépend de", synthetise: "synthétise", pilote: "pilote" };
+const SORTANT = { lance: "Lance / exécute", importe: "Importe", inclut: "Inclut", lit: "Lit",
+  ecrit: "Écrit / génère", depend: "Dépend de", synthetise: "Synthétise", pilote: "Pilote" };
+const ENTRANT = { lance: "Lancé par", importe: "Importé par", inclut: "Inclus par", lit: "Lu par",
+  ecrit: "Écrit / généré par", depend: "Requis par", synthetise: "Synthétisé par", pilote: "Piloté par" };
+const ICONES = { make: "$ ", "données": "◆ ", dossier: "▣ ", bin: "▶ ", ext: "⚙ " };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; };
+const sansAccent = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const echappe = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ---------------------------------------------------------------- données
+const parId = new Map(D.noeuds.map(n => [n.id, n]));
+const voies = D.groupes.map((g, i) => ({ ...g, i, noeuds: [] }));
+const voieDe = new Map(voies.map(v => [v.id, v]));
+for (const n of D.noeuds) { (voieDe.get(n.groupe) || voies[voies.length - 1]).noeuds.push(n); n.sort = []; n.entre = []; }
+for (const l of D.liens) { const s = parId.get(l.source), c = parId.get(l.cible);
+  if (!s || !c) continue; l.s = s; l.c = c; s.sort.push(l); c.entre.push(l); }
+const liens = D.liens.filter(l => l.s && l.c);
+// « inclut » et « dépend de » masqués au départ (nombreux, peu parlants) : réactivables dans la légende
+const typesActifs = new Set(D.types.filter(t => !["inclut", "depend"].includes(t)));
+const etat = { choisi: null, survol: null, recherche: "", parcours: null, etape: 0 };
+
+// ---------------------------------------------------------------- disposition
+for (const v of voies) {
+  v.x = MARGE + v.i * VOIE;
+  v.noeuds.sort((a, b) => (a.genre === b.genre ? 0 : a.genre < b.genre ? -1 : 1) || a.id.localeCompare(b.id));
+  v.noeuds.forEach((n, k) => { n.voie = v; n.x = v.x; n.y = HAUT + k * (H + GY); });
+}
+// barycentres : rapproche chaque nœud de ses voisins des autres colonnes (moins de croisements)
+for (let passe = 0; passe < 12; passe++) {
+  const ordre = passe % 2 ? [...voies].reverse() : voies;
+  for (const v of ordre) {
+    for (const n of v.noeuds) {
+      const ys = [...n.sort.map(l => l.c), ...n.entre.map(l => l.s)].filter(m => m.voie !== v).map(m => m.y);
+      n.cle = ys.length ? ys.reduce((a, b) => a + b, 0) / ys.length : n.y;
+    }
+    v.noeuds.sort((a, b) => a.cle - b.cle);
+    v.noeuds.forEach((n, k) => { n.y = HAUT + k * (H + GY); });
+  }
+}
+const hauteurMax = Math.max(...voies.map(v => v.noeuds.length)) * (H + GY) + HAUT + 30;
+
+// points d'attache répartis sur le côté de chaque nœud
+function cotes(l) {
+  const vs = l.s.voie.i, vc = l.c.voie.i;
+  if (vs < vc) return ["d", "g"]; if (vs > vc) return ["g", "d"]; return ["d", "d"];
+}
+function repartit() {
+  const ports = new Map();
+  for (const l of liens) { if (!typesActifs.has(l.type)) continue;
+    const [cs, cc] = cotes(l);
+    for (const [n, c, autre] of [[l.s, cs, l.c], [l.c, cc, l.s]]) {
+      const k = n.id + c; if (!ports.has(k)) ports.set(k, []); ports.get(k).push({ l, n, autre }); } }
+  for (const liste of ports.values()) {
+    liste.sort((a, b) => a.autre.y - b.autre.y);
+    liste.forEach((p, i) => { const y = p.n.y + H * (0.2 + 0.6 * (liste.length === 1 ? .5 : i / (liste.length - 1)));
+      if (p.l.s === p.n) p.l.y1 = y; else p.l.y2 = y; });
+  }
+}
+function chemin(l) {
+  const [cs, cc] = cotes(l);
+  const x1 = cs === "d" ? l.s.x + W : l.s.x, x2 = cc === "d" ? l.c.x + W : l.c.x;
+  const y1 = l.y1 ?? l.s.y + H / 2, y2 = l.y2 ?? l.c.y + H / 2;
+  if (cs === cc) { const dx = 36 + Math.min(120, Math.abs(y2 - y1) * .18);
+    return `M${x1},${y1} C${x1 + dx},${y1} ${x2 + dx},${y2} ${x2 + 6},${y2}`; }
+  const s = cs === "d" ? 1 : -1, dx = Math.max(50, Math.abs(x2 - x1) * .42);
+  return `M${x1},${y1} C${x1 + s * dx},${y1} ${x2 - s * dx},${y2} ${x2 - s * 6},${y2}`;
+}
+
+// ---------------------------------------------------------------- dessin
+const svg = document.getElementById("svg"), monde = document.getElementById("monde");
+const gVoies = document.getElementById("voies"), gLiens = document.getElementById("liens"),
+      gNoeuds = document.getElementById("noeuds"), gBadges = document.getElementById("badges"),
+      gTrace = document.getElementById("trace"), gEtiq = document.getElementById("etiquettes");
+
+function marqueurs() {
+  const defs = document.getElementById("defs"); defs.innerHTML = "";
+  for (const t of D.types) {
+    const m = el("marker", { id: "fl-" + t, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7,
+      orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0,0 L10,5 L0,10 z", fill: css("--l-" + t) }, m);
+  }
+}
+function dessineVoies() {
+  gVoies.innerHTML = "";
+  for (const v of voies) {
+    el("rect", { class: "voie-fond", x: v.x - 18, y: 14, width: W + 36, height: hauteurMax, rx: 14 }, gVoies);
+    el("rect", { x: v.x - 18, y: 14, width: W + 36, height: 5, rx: 2.5, fill: css("--g-" + v.id) }, gVoies);
+    const t = el("text", { class: "voie-titre", x: v.x + W / 2, y: 44, "text-anchor": "middle" }, gVoies);
+    t.textContent = v.titre;
+  }
+}
+function coupe(s, n) { return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+function dessineNoeuds() {
+  gNoeuds.innerHTML = "";
+  for (const n of D.noeuds) {
+    const g = el("g", { class: "noeud" + (n.documente ? "" : " non-doc"), transform: `translate(${n.x},${n.y})` }, gNoeuds);
+    n.g = g;
+    const ext = n.genre === "ext";
+    el("rect", { class: "corps", width: W, height: H, rx: ext ? H / 2 : 9 }, g);
+    if (!ext) el("rect", { x: 0, y: 0, width: 5, height: H, rx: 2.5, fill: css("--g-" + (n.voie?.id || "donnees")) }, g);
+    const t = el("text", { class: "titre", x: ext ? 18 : 13, y: 20 }, g);
+    const gen = /GÉNÉRÉ/.test(n.role) ? "⚙ " : "";
+    t.textContent = (ICONES[n.genre] || "") + gen + coupe(n.titre, 26);
+    const s = el("text", { class: "sous", x: ext ? 18 : 13, y: 37 }, g);
+    s.textContent = coupe(n.role || (n.documente ? n.desc.split("\n")[0] : "— sans description —"), 36);
+    if (!["make", "ext", "données", "dossier", "bin"].includes(n.genre)) {
+      const k = el("text", { class: "genre", x: W - 9, y: 16 }, g); k.textContent = n.genre; }
+    const tt = el("title", {}, g); tt.textContent = n.id + (n.role ? "\n" + n.role : "");
+    g.addEventListener("mouseenter", () => { etat.survol = n; maj(); });
+    g.addEventListener("mouseleave", () => { etat.survol = null; maj(); });
+    g.addEventListener("click", e => { e.stopPropagation(); choisis(n); });
+  }
+}
+function dessineLiens() {
+  repartit(); gLiens.innerHTML = "";
+  for (const l of liens) {
+    if (!typesActifs.has(l.type)) { l.p = null; continue; }
+    const p = el("path", { class: "lien " + l.type, d: chemin(l), stroke: css("--l-" + l.type),
+      "marker-end": `url(#fl-${l.type})` }, gLiens);
+    const tt = el("title", {}, p);
+    tt.textContent = `${l.s.titre}  —${NOMS_TYPES[l.type]}→  ${l.c.titre}` + (l.label ? `\n${l.label}` : "") +
+      (l.auto ? "\n(trouvé dans le code)" : "\n(décrit dans modele.py)");
+    l.p = p;
+  }
+}
+
+// ---------------------------------------------------------------- surbrillance
+function voisins(n) {
+  const s = new Set([n.id]);
+  for (const l of [...n.sort, ...n.entre]) if (typesActifs.has(l.type)) { s.add(l.s.id); s.add(l.c.id); }
+  return s;
+}
+function maj() {
+  const focusNoeud = etat.survol || etat.choisi;
+  let foyer = null, liensForts = new Set();
+  gBadges.innerHTML = ""; gTrace.innerHTML = ""; gEtiq.innerHTML = "";
+  if (etat.parcours) {
+    const et = etat.parcours.etapes; foyer = new Set(et.map(e => e.noeud));
+    if (focusNoeud && etat.survol) voisins(focusNoeud).forEach(x => foyer.add(x));
+    // trace pointillée d'une étape à la suivante + numéros
+    for (let i = 0; i + 1 < et.length; i++) {
+      const a = parId.get(et[i].noeud), b = parId.get(et[i + 1].noeud); if (a === b) continue;
+      el("path", { class: "trace-parcours", d: `M${a.x + W / 2},${a.y + H / 2} L${b.x + W / 2},${b.y + H / 2}` }, gTrace);
+    }
+    const dejas = new Map();
+    et.forEach((e, i) => { const n = parId.get(e.noeud); const k = dejas.get(n.id) || 0; dejas.set(n.id, k + 1);
+      const b = el("g", { class: "badge", transform: `translate(${n.x - 6 + k * 24},${n.y - 6})` }, gBadges);
+      el("circle", { r: 11, ...(i === etat.etape ? { stroke: css("--texte"), "stroke-width": 2.5 } : {}) }, b);
+      el("text", {}, b).textContent = i + 1; });
+    for (const l of liens) if (foyer.has(l.s.id) && foyer.has(l.c.id)) liensForts.add(l);
+  } else if (focusNoeud) {
+    foyer = voisins(focusNoeud);
+    for (const l of [...focusNoeud.sort, ...focusNoeud.entre]) liensForts.add(l);
+  } else if (etat.recherche) {
+    const q = sansAccent(etat.recherche);
+    foyer = new Set(D.noeuds.filter(n => sansAccent(n.id + " " + n.titre + " " + n.role).includes(q)).map(n => n.id));
+  }
+  for (const n of D.noeuds) {
+    n.g.classList.toggle("terne", !!foyer && !foyer.has(n.id));
+    n.g.classList.toggle("choisi", etat.choisi === n);
+    n.g.classList.toggle("trouve", !!etat.recherche && !focusNoeud && !etat.parcours && foyer?.has(n.id));
+  }
+  for (const l of liens) { if (!l.p) continue;
+    const fort = liensForts.has(l);
+    l.p.classList.toggle("fort", fort);
+    l.p.classList.toggle("terne", !!foyer && !fort);
+    if (fort && focusNoeud && !etat.parcours && l.label) {        // étiquettes des liens du nœud survolé
+      const t = el("text", { class: "etiquette-lien" }, gEtiq);
+      const mid = l.p.getPointAtLength(l.p.getTotalLength() / 2);
+      t.setAttribute("x", mid.x); t.setAttribute("y", mid.y - 4); t.setAttribute("text-anchor", "middle");
+      t.textContent = l.label;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- vue (déplacer, zoomer)
+const vue = { x: 0, y: 0, k: 1 };
+function applique() { monde.setAttribute("transform", `translate(${vue.x},${vue.y}) scale(${vue.k})`); }
+function toutVoir() {
+  const r = svg.getBoundingClientRect(), lw = voies.length * VOIE + MARGE, lh = hauteurMax + 30;
+  vue.k = Math.min(r.width / lw, r.height / lh, 1.2);
+  vue.x = (r.width - lw * vue.k) / 2; vue.y = 8; applique();
+}
+function centre(n) {
+  const r = svg.getBoundingClientRect(); vue.k = Math.max(vue.k, .85);
+  vue.x = r.width / 2 - (n.x + W / 2) * vue.k; vue.y = r.height / 2 - (n.y + H / 2) * vue.k; applique();
+}
+svg.addEventListener("wheel", e => { e.preventDefault();
+  const r = svg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const f = Math.exp(-e.deltaY * .0015), k = Math.min(3, Math.max(.2, vue.k * f));
+  vue.x = mx - (mx - vue.x) * k / vue.k; vue.y = my - (my - vue.y) * k / vue.k; vue.k = k; applique(); }, { passive: false });
+let glisse = null;
+svg.addEventListener("mousedown", e => { glisse = { x: e.clientX, y: e.clientY, vx: vue.x, vy: vue.y, bouge: false };
+  document.getElementById("vue").classList.add("glisse"); });
+window.addEventListener("mousemove", e => { if (!glisse) return;
+  const dx = e.clientX - glisse.x, dy = e.clientY - glisse.y; if (Math.abs(dx) + Math.abs(dy) > 3) glisse.bouge = true;
+  vue.x = glisse.vx + dx; vue.y = glisse.vy + dy; applique(); });
+window.addEventListener("mouseup", () => { document.getElementById("vue").classList.remove("glisse");
+  setTimeout(() => glisse = null, 0); });
+svg.addEventListener("click", () => { if (glisse?.bouge) return; if (etat.choisi && !etat.parcours) { etat.choisi = null; panneauAccueil(); maj(); } });
+
+// ---------------------------------------------------------------- panneau
+const panneau = document.getElementById("panneau");
+function puce(n, extra = "") {
+  return `<span class="puce" data-id="${echappe(n.id)}"><span class="groupe-pastille" style="background:${css("--g-" + n.voie.id)}"></span>${echappe(n.titre)}${extra ? ` <small>${echappe(extra)}</small>` : ""}</span>`;
+}
+function branchePuces() {
+  panneau.querySelectorAll(".puce[data-id]").forEach(p => p.addEventListener("click", () => {
+    const n = parId.get(p.dataset.id); choisis(n); centre(n); }));
+  panneau.querySelectorAll("[data-parcours]").forEach(b => b.addEventListener("click", () => ouvreParcours(+b.dataset.parcours)));
+}
+function choisis(n) {
+  if (glisse?.bouge) return;
+  if (etat.parcours) { const i = etat.parcours.etapes.findIndex(e => e.noeud === n.id); if (i >= 0) { etat.etape = i; panneauParcours(); maj(); return; } }
+  etat.parcours = null; etat.choisi = n; maj();
+  const groupes = (liste, noms, autre) => {
+    const par = {}; for (const l of liste) (par[l.type] ||= []).push(l);
+    return D.types.filter(t => par[t]).map(t => `<h3>${noms[t]} (${par[t].length})</h3>` +
+      par[t].map(l => puce(autre(l), l.label)).join("")).join("");
+  };
+  const dansParcours = D.parcours.map((p, i) => [p, i]).filter(([p]) => p.etapes.some(e => e.noeud === n.id));
+  panneau.innerHTML = `
+    <div class="chemin"><span class="groupe-pastille" style="background:${css("--g-" + n.voie.id)}"></span>${echappe(n.voie.titre)} · ${echappe(n.genre)}</div>
+    <h2>${echappe(n.titre)}</h2>
+    <div class="chemin">${echappe(n.id)}</div>
+    ${n.role ? `<div class="role">${echappe(n.role)}</div>` : ""}
+    ${n.lien ? `<a href="${n.lien}">Ouvrir dans VS Code</a>` : ""}
+    ${n.desc ? `<h3>Description</h3><pre>${echappe(n.desc)}</pre>` : n.documente ? "" : `<p class="avert">Sans description : ajouter une docstring / un commentaire d'en-tête, ou un rôle dans doc/carte/modele.py.</p>`}
+    ${groupes(n.sort, SORTANT, l => l.c)}
+    ${groupes(n.entre, ENTRANT, l => l.s)}
+    ${n.sort.length + n.entre.length === 0 ? "<h3>Liens</h3><p>Aucun lien connu.</p>" : ""}
+    ${dansParcours.length ? "<h3>Dans les parcours</h3><div class='liste-parcours'>" + dansParcours.map(([p, i]) =>
+      `<button data-parcours="${i}">${echappe(p.titre)}</button>`).join("") + "</div>" : ""}
+    <p style="margin-top:24px"><button class="btn" id="retour">← Accueil</button></p>`;
+  panneau.querySelector("#retour").addEventListener("click", () => { etat.choisi = null; panneauAccueil(); maj(); });
+  branchePuces();
+}
+function ouvreParcours(i) { etat.parcours = D.parcours[i]; etat.etape = 0; etat.choisi = null; panneauParcours(); maj();
+  centre(parId.get(etat.parcours.etapes[0].noeud)); }
+function panneauParcours() {
+  const p = etat.parcours;
+  panneau.innerHTML = `<div class="chemin">Parcours</div><h2>${echappe(p.titre)}</h2><p>${echappe(p.explication)}</p>
+    <div class="nav"><button class="btn" id="prec">◀ Précédent</button><button class="btn" id="suiv">Suivant ▶</button>
+    <button class="btn" id="quitte">✕ Quitter</button></div>
+    <ol class="etapes">${p.etapes.map((e, i) => { const n = parId.get(e.noeud);
+      return `<li data-i="${i}" class="${i === etat.etape ? "courante" : ""}"><b>${echappe(n.titre)}</b><span>${echappe(e.texte)}</span></li>`; }).join("")}</ol>`;
+  const va = i => { etat.etape = Math.max(0, Math.min(p.etapes.length - 1, i)); panneauParcours(); maj(); centre(parId.get(p.etapes[etat.etape].noeud)); };
+  panneau.querySelector("#prec").onclick = () => va(etat.etape - 1);
+  panneau.querySelector("#suiv").onclick = () => va(etat.etape + 1);
+  panneau.querySelector("#quitte").onclick = () => { etat.parcours = null; panneauAccueil(); maj(); };
+  panneau.querySelectorAll(".etapes li").forEach(li => li.onclick = () => va(+li.dataset.i));
+}
+function panneauAccueil() {
+  const m = D.meta;
+  panneau.innerHTML = `
+    <h2>Comment lire la carte</h2>
+    <p>Chaque carte est un fichier (ou un outil, un dossier, une commande <code>make</code>), rangé dans la colonne de sa
+    partie du projet. Les flèches disent <b>qui lance qui</b>, <b>qui lit / écrit quoi</b>, <b>qui inclut / importe quoi</b>.
+    Survolez une carte pour isoler ses voisins, cliquez pour le détail ; ⚙ = fichier généré, pointillés = sans description.</p>
+    <h3>Parcours pas à pas</h3>
+    <div class="liste-parcours">${D.parcours.map((p, i) => `<button data-parcours="${i}">${echappe(p.titre)}<small>${echappe(p.explication)}</small></button>`).join("")}</div>
+    <h3>Mise à jour</h3>
+    <p>Regénérée par <code>make carte</code> et à chaque commit (hook installé par <code>make carte-hook</code>).
+    Fichiers, descriptions, imports, includes et cibles make sont lus dans le code ; ce que les scripts écrivent,
+    les rôles et les parcours sont dans <code>doc/carte/modele.py</code>.</p>
+    <p class="chemin">Générée le ${echappe(m.date)}${m.commit ? " · dernier commit " + echappe(m.commit) : ""} ·
+    ${D.noeuds.length} nœuds, ${liens.length} liens</p>
+    ${m.a_documenter.length ? `<h3>À documenter (${m.a_documenter.length})</h3>` + m.a_documenter.map(id => puce(parId.get(id))).join("") : ""}
+    ${m.avertissements.length ? `<h3>Incohérences de modele.py</h3>` + m.avertissements.map(a => `<p class="avert">${echappe(a)}</p>`).join("") : ""}`;
+  branchePuces();
+}
+
+// ---------------------------------------------------------------- en-tête
+const legende = document.getElementById("legende");
+for (const t of D.types) {
+  if (!liens.some(l => l.type === t)) continue;
+  const b = document.createElement("button");
+  b.innerHTML = `<span class="pastille" style="background:${css("--l-" + t)}"></span>${NOMS_TYPES[t]}`;
+  b.title = "Afficher / masquer ces liens";
+  if (!typesActifs.has(t)) b.classList.add("off");
+  b.onclick = () => { typesActifs.has(t) ? typesActifs.delete(t) : typesActifs.add(t); b.classList.toggle("off"); dessineLiens(); maj(); };
+  legende.appendChild(b);
+}
+document.getElementById("meta").textContent = `généré ${D.meta.date}`;
+document.getElementById("recentrer").onclick = toutVoir;
+const rech = document.getElementById("recherche");
+rech.addEventListener("input", () => { etat.recherche = rech.value.trim(); maj(); });
+rech.addEventListener("keydown", e => { if (e.key === "Enter") {
+  const q = sansAccent(rech.value.trim()); const n = D.noeuds.find(n => sansAccent(n.id + " " + n.titre + " " + n.role).includes(q));
+  if (n) { choisis(n); centre(n); } } });
+window.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== rech) { e.preventDefault(); rech.focus(); }
+  if (e.key === "Escape") { etat.choisi = null; etat.parcours = null; etat.recherche = ""; rech.value = ""; rech.blur(); panneauAccueil(); maj(); }
+  if (etat.parcours && (e.key === "ArrowRight" || e.key === "ArrowLeft") && document.activeElement !== rech) {
+    etat.etape = Math.max(0, Math.min(etat.parcours.etapes.length - 1, etat.etape + (e.key === "ArrowRight" ? 1 : -1)));
+    panneauParcours(); maj(); centre(parId.get(etat.parcours.etapes[etat.etape].noeud)); }
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { marqueurs(); dessineVoies(); dessineNoeuds(); dessineLiens(); maj(); });
+
+marqueurs(); dessineVoies(); dessineNoeuds(); dessineLiens(); panneauAccueil(); maj(); toutVoir();
+window.addEventListener("resize", toutVoir);
+// Liens directs : carte.html#n=cpp/cnn.cpp (un nœud) ou #p=0 (un parcours, numéroté depuis 0)
+function depuisAdresse() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (h.startsWith("n=") && parId.has(h.slice(2))) { const n = parId.get(h.slice(2)); choisis(n); centre(n); }
+  else if (h.startsWith("p=") && D.parcours[+h.slice(2)]) ouvreParcours(+h.slice(2));
+}
+window.addEventListener("hashchange", depuisAdresse); depuisAdresse();
+</script>
+</body>
+</html>
