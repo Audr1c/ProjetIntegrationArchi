@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     string batch     = pos.size() > 2 ? pos[2] : "data_batch_1.bin";
 
     if (k_size != KS) {
-        cerr << "Erreur : ce binaire est compilé pour un noyau " << KS << "x" << KS << " (reçu k_size = "
+        cerr << "Erreur : ce binaire est compile pour un noyau " << KS << "x" << KS << " (recu k_size = "
              << k_size << ") : recompiler avec -DKS=" << k_size << endl;
         return 1;
     }
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
         ofstream dump;
         if (!dump_file.empty()) {
             dump.open(dump_file);
-            if (!dump) throw runtime_error("impossible d'écrire " + dump_file);
+            if (!dump) throw runtime_error("impossible d'ecrire " + dump_file);
             dump << format_signature() << "\n";
         }
 
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
                      << setprecision(6) << margin << endl;      // endl : explore.py lit au fil de l'eau
             } else {
                 cout << "\r  image " << right << setw(5) << n + 1 << "/" << max_count
-                     << "  précision : " << fixed << setprecision(2) << 100.0 * works / (n + 1) << " %" << flush;
+                     << "  precision : " << fixed << setprecision(2) << 100.0 * works / (n + 1) << " %" << flush;
             }
         }
         cout << endl;

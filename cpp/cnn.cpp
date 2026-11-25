@@ -2,16 +2,31 @@
 
 
 /*
- * ROM des coefficients (coeffs_k3.hpp / coeffs_k5.hpp, générés par hls/gen_coeffs.py) :
- *     CNN_ROM_BEGIN(type, nom, taille)  valeurs...  CNN_ROM_END(type, nom, taille)
+ * ROM des coefficients ker1, bia1, ..., fck, fcb : trois façons de les compiler.
  *
- * Synthèse (__SYNTHESIS__, défini par Catapult) : static const <type> nom[taille] = {...};
- *     tableau constant local à la fonction top -> ROM ; conversion double -> ac_fixed faite par l'outil.
- * PC : les mêmes littéraux dans un tableau double (données brutes : compilation rapide), convertis
- *     une seule fois au premier appel par le même constructeur ac_fixed(double) -> valeurs identiques.
- *     (Initialiser directement 74 000 ac_fixed coûte ~40 s et 1,3 Go de compilation à g++.)
+ * 1) CNN_ROM_RAW (défaut en synthèse, ou -DCNN_ROM_RAW sur PC pour le tester) : coeffs_kK_raw.hpp,
+ *    GÉNÉRÉ par hls/gen_coeffs.py dans les formats de config.hpp (#error s'ils ont changé depuis :
+ *    relancer make coeffs) : static const RomWord<type> nom[taille] = {entiers}; -> ROM.
+ *    Valeurs déjà quantifiées (floor(x * 2^F) replié sur W bits = ac_fixed(double) en AC_TRN/AC_WRAP),
+ *    lues par rom_value() (utils.hpp). Un tableau d'entiers natifs se compile ~20x plus vite que
+ *    74 000 constructeurs ac_fixed : c'est ce qui faisait durer go analyze 17 min.
+ * 2) __SYNTHESIS__ avec -DCNN_ROM_DOUBLE (ancienne méthode, secours) : static const <type> nom[taille]
+ *    = {double...}; conversion double -> ac_fixed faite par l'outil (lent).
+ * 3) PC (défaut) : coeffs_kK.hpp, les mêmes littéraux dans un tableau double, convertis une seule fois
+ *    au premier appel par le constructeur ac_fixed(double) -> valeurs identiques à 1) et 2).
+ *    Ne dépend pas des formats : Exploration/ peut changer config.hpp par -D sans rien regénérer.
+ * Sous SCVerify, le C++ de référence est compilé sans __SYNTHESIS__ (méthode 3) et le RTL vient de 1) :
+ * la comparaison RTL / C++ vérifie donc aussi l'encodage des ROM.
  */
-#ifdef __SYNTHESIS__
+#if defined(__SYNTHESIS__) && !defined(CNN_ROM_DOUBLE) && !defined(CNN_ROM_RAW)
+#define CNN_ROM_RAW
+#endif
+
+#if defined(CNN_ROM_RAW)
+
+// pas de macros : coeffs_kK_raw.hpp déclare directement les tableaux
+
+#elif defined(__SYNTHESIS__)
 
 #define CNN_ROM_BEGIN(T, name, size)  static const T name[size] = {
 #define CNN_ROM_END(T, name, size)    };
@@ -42,7 +57,11 @@ void cnn(
 ) {
     // Coefficients ker1, bia1, ..., fck, fcb : ROM (voir CNN_ROM_BEGIN plus haut).
     // Définis dans la fonction top et non en global (manuel Catapult §6.1.2).
-#if KS == 5
+#if defined(CNN_ROM_RAW) && KS == 5
+#include "coeffs_k5_raw.hpp"
+#elif defined(CNN_ROM_RAW)
+#include "coeffs_k3_raw.hpp"
+#elif KS == 5
 #include "coeffs_k5.hpp"
 #else
 #include "coeffs_k3.hpp"

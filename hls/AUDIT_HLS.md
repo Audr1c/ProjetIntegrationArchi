@@ -45,7 +45,10 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 | B-07 | 🟠 | `read_image.cpp` | Crop + normalisation en `double` dans le testbench : la frontière HW/SW de l'entrée n'est pas définie | ✅ décidé : hors matériel |
 | C-01 | 🔴 | `main.cpp` | Pas de testbench SCVerify (`CCS_MAIN` / `CCS_DESIGN` / `CCS_RETURN`) | ✅ fait (commit C) |
 | C-02 | 🟠 | script Tcl | Fichiers du testbench à exclure de la synthèse (`-exclude true`) | ✅ fait (commit C) |
-| C-03 | 🟠 | `hls/` | Pas de script Tcl CNN, et la cible de la démo est un Artix-7 au lieu du Zynq-7000 | 🔶 fait (commit C), nom de bibliothèque Zynq à vérifier |
+| C-03 | 🟠 | `hls/` | Pas de script Tcl CNN, et la cible de la démo est un Artix-7 au lieu du Zynq-7000 | ✅ validé à l'école le 2026-11-24 (`mgc_Xilinx-ZYNQ-1_beh`) |
+| C-10 | 🔴 | `tb_hls.cpp` | `data/` absent d'un clone (ignoré par git) : SCVerify n'a simulé aucune image | ✅ fait : `hls/ref/images_200.bin` versionné |
+| C-11 | 🟠 | `hls/` | Résultats Catapult lisibles seulement dans la GUI / le log brut | ✅ fait : `hls/catapult_report.py`, `hls/cnn_report.tcl`, `hls/rapports/` |
+| C-12 | 🟡 | `cnn.tcl` | `go analyze` = 17 min (ROM) ; simulation RTL de 46 M cycles/image = des heures | ✅ ROM en entiers (`coeffs_k*_raw.hpp`, à remesurer), `project save`, branches, simulation RTL à part |
 | C-04 | 🟠 | `config.hpp:15`, `utils.hpp:6` | Include de la copie locale `../hls/include/ac_fixed.h` (v4.0) au lieu de celle de Catapult | ✅ fait (commit C) |
 | C-05 | 🟡 | `utils.hpp:5,8`, `cnn.hpp:4,8` | `<vector>` et `using namespace std` dans les en-têtes du design | ✅ fait (commit A) |
 | C-06 | 🟠 | — | Aucune vérification bit-exacte entre l'ancien et le nouveau modèle | ✅ fait (commit C) : `--dump`, `hls/ref/`, `make nonreg` |
@@ -150,7 +153,7 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
   | **Total** | **128 394** | **2,05 Mbit** | **1,24 Mbit** |
 
   Zynq-7010 (Zybo Z7-10) : 60 BRAM36 = 2,1 Mbit, 80 DSP. Zynq-7020 (Z7-20) : 140 BRAM36 = 4,9 Mbit, 220 DSP. La plateforme de l'encadrant utilise aussi des BRAM pour la mémoire vidéo.
-- **Correction** : ajouter la bibliothèque de RAM (`solution library add Xilinx_RAMS`, comme dans `demo_sim.tcl`). Vérifier quelle carte on a (Z7-10 ou Z7-20). Avec la config 16 bits sur une Z7-10, ça ne tient pas : voir D-01 et D-04.
+- **Correction** : ajouter la bibliothèque de RAM (`solution library add Xilinx_RAMS`, comme dans `demo_sim.tcl`). Carte vérifiée le 2026-11-25 : **Zybo Z7-20** (XC7Z020-1CLG400C). Avec la config 16 bits sur une Z7-10, ça ne tient pas : voir D-01 et D-04.
 - **État** : ⏸ reporté après la première synthèse (décision du 2026-11-24).
 
 ### B-07 🟠 Frontière HW/SW de l'entrée non définie
@@ -246,6 +249,52 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 - **Correction prévue** : ajouter `-DKS=<k>` dans `Runner.defines()`, ajouter les nouveaux fichiers dans `CMakeLists.txt` et `runner.py`, et supprimer `extract_coeff.o` si `main.cpp` ne lit plus les coefficients. Le cache sera invalidé, ce qui est **normal** : si C-06 est bit-exact, les anciens résultats restent valables, mais le hash ne le sait pas.
 - **Correction ajoutée (commit C)** : `Exploration/validate.py` était cassé depuis les commits A et B. Il linkait `extract_coeff.o` et ne passait pas `-DKS`. Corrigé, et testé pour k=5 et k=3.
 
+### C-10 🔴 Images de test absentes sur la machine de l'école (constaté le 2026-11-24)
+- **Constat** : premier passage complet de `cnn.tcl` sous Catapult 2024.2. Tout passe jusqu'à `go extract` et la
+  compilation Questa, mais le testbench s'arrête aussitôt : `load_image : impossible d'ouvrir …/data/cifar-10-batches-bin/data_batch_1.bin`.
+  `data/*` est ignoré par git, donc absent du clone de l'école. Résultat SCVerify : *Nothing to compare, all output
+  capture counts are zero* (ni le C++ seul ni le RTL n'ont été vérifiés).
+- **Correction** : `hls/ref/images_200.bin` = les 200 premières images de `data_batch_1` (`head -c 614600`), versionnées
+  (exception `!hls/ref/*.bin` dans `.gitignore`), les mêmes que `hls/ref/scores_k*.txt`. `tb_hls.cpp` ne lit plus que ce fichier.
+
+### C-11 🟠 Récupérer les résultats sans GUI
+- **Fichiers utiles** dans `hls/work/Catapult_N/cnn.vK/` : `rtl.rpt` (surface : *Bill Of Materials*, *Area Scores* ;
+  *Timing Report* : slack), `cycle.rpt` (*Clock Information*, *Memory Resources*, *Loops* avec itérations / c-steps / II,
+  *Loop Execution Profile* : % des cycles par boucle), `messages.txt`, `directives.tcl`, `scverify/rtl_vhdl_msim/sim.log`
+  (*Simulation PASSED/FAILED*, *error count*) ; transcript complet : `hls/work/catapult.log`.
+- **Outil** : `hls/catapult_report.py` (Python standard) les lit et produit un tableau Markdown/JSON ; `--save hls/rapports`
+  les copie d'abord dans un dossier versionné. `cnn.tcl` l'appelle à la fin (`cnn_report`, dans `hls/cnn_report.tcl`).
+
+### C-12 🟡 Durées
+- `go analyze` : 1016 s (les 74 000 littéraux `double` → `ac_fixed` des ROM, comme g++ : voir pièges dans CLAUDE.md).
+  Le reste (compile → extract) : ~2 min. D'où `project save` après `go extract`, puis exploration par
+  `solution new -state assembly` (aucune réanalyse).
+- **ROM en entiers (2026-11-25)** : le coût venait de la construction de 74 000 objets (mesure g++ sur 74 000 valeurs :
+  `ac_fixed` depuis des double 7,5 s / 1,1 Go ; `ac_int` depuis des entiers 5,7 s ; entiers C natifs 0,36 s).
+  `hls/gen_coeffs.py` écrit donc aussi `cpp/coeffs_k*_raw.hpp` : `static const RomWord<T> nom[] = {{r}, ...}` avec
+  r = floor(x·2^F) replié sur W bits (= `ac_fixed(double)` en AC_TRN/AC_WRAP), relus par `rom_value()` (set_slc).
+  Vérifié élément par élément (0 différence sur 6 jeux de formats, k=3 et 5, dont repliement, I < 0, I > W),
+  `make nonreg` (cible `main_raw`), et SCVerify compare le RTL (ROM entières) au C++ (ROM double).
+  g++ sur `cnn.cpp` en `__SYNTHESIS__` : 7,7 s → 0,66 s. **À remesurer sous Catapult.** Contrepartie : les ROM dépendent
+  des formats → `make coeffs` après chaque changement de `config.hpp` (`#error` sinon). Secours : `ROM_FLAGS -DCNN_ROM_DOUBLE`.
+- Latence v1 : **46 123 242 cycles** (0,46 s/image à 100 MHz, ~4,3 cycles/MAC). La démo FIR simule ~1 300 cycles/s sous
+  Questa avec traces → la simulation RTL d'**une** image se compte en heures : `TB_IMAGES 1`, et `RUN_RTL_SIM 0` par défaut
+  (commande `nohup` affichée par `cnn_sim_cmd`). La refaire après les directives de pipeline (D-06).
+- **Suivi de la simulation RTL (2026-11-25)** : `hls/sim_progress.tcl`, sourcé par le script vsim de SCVerify via la
+  variable make `QuestaSIM_MSIM_DOFILE` (fichier utilisateur prévu par `scverify_msim_wave.tcl`, avant `do_simulation_run`),
+  fait `run` par tranches de `CNN_SIM_STEP` cycles et affiche cycle / total / % / image / vitesse / temps restant ;
+  s'arrête quand le temps simulé n'avance plus (sc_stop du testbench), garde-fou à 1,5 × le total attendu.
+  `hls/sim_rtl.sh <solution> [N]` le lance hors Catapult (`QuestaSIM_SUPPRESS_WAVEFORMS=true` : pas de traces).
+  Testé sur maquette uniquement (tclsh, faux make) : à valider sous Questa.
+
+### Résultats de la première synthèse (cnn.v1, config large 16 bits, aucune directive, 2026-11-24)
+- Latence 46 123 242 cycles ; score de surface 202 042 (*Final schedule*, CRAAS-12) ; 380 opérations réelles.
+- Mémoires (MEM-4 / MEM-10) : feature maps image2…image7 en `BLOCK_1R1W_RBW` (36 864 / 9 216 / 4 608 / 1 152 / 720 / 180 × 16),
+  entrée `image` 1728 × 16 en RAM externe, ROM ker1 4800×16, ker2 51 200×14, ker3 16 000×15, fck 1800×14 (Catapult a
+  rétréci les ROM de 16 à 14-15 bits : MEM-87). Estimation : **~130 RAMB18** → ~46 % de notre **Z7-20** (280) ; n'aurait pas tenu dans un Z7-10 (120).
+  conv1 (36) et ker2 (49) représentent 2/3 du total : D-04 et D-01 sont les leviers.
+- `scores` sort en `ccs_out` 160 bits (10 × 16) ; reset synchrone `rst`, handshake `start`/`done`.
+
 ---
 
 ## D : qualité du matériel (après la première synthèse)
@@ -270,7 +319,7 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 
 ### D-04 🟠 Fusionner conv1 et max-pool1
 - La sortie de conv1 (36 864 mots) n'est lue que par le pool. En calculant conv1 ligne par ligne et en poolant à la volée avec un buffer de 3 lignes (`ac_window` / line buffer [UR ch. 7]), la plus grosse feature map disparaît.
-- À faire seulement si le budget BRAM l'exige (Z7-10).
+- À faire seulement si le budget BRAM l'exige (pas nécessaire sur notre Z7-20 avec la config actuelle).
 
 ### D-05 🟡 Lecture redondante dans le max-pool
 - `max_pool` lit d'abord le pixel `(2r, 2c)`, puis les 9 pixels de la fenêtre, qui contient ce même pixel.
@@ -388,6 +437,6 @@ void cnn(const input_t image[C0*IMG_H*IMG_W], out_t scores[N_CLASSES]) {
 6. [x] **C-09** : adapter `main.cpp` (coefficients compilés, `KS`), `CMakeLists.txt` et `runner.py` (`-DKS`).
 7. [x] **Non-régression** : scores identiques sur les 200 images de l'étape 2, et précision inchangée sur 1000 images (`cpp/build/main 1000 5`).
 8. [x] **C-01, C-07, C-08** : écrire `tb_hls.cpp` (1 à 5 images, comparaison aux scores de référence).
-9. [~] **C-02, C-03** : `hls/cnn.tcl` écrit. **Reste** : le lancer à l'école (`go analyze` → `go extract`), vérifier le nom de la bibliothèque Zynq, puis B-06.
-10. [ ] `go extract` et SCVerify (B-07 et D-01 décidés le 2026-11-24 : entrée normalisée, config large).
+9. [x] **C-02, C-03** : `hls/cnn.tcl` lancé à l'école le 2026-11-24 : `go extract` OK, bibliothèque Zynq validée. C-10 → C-12 corrigés ensuite.
+10. [~] `go extract` ✅ ; SCVerify : relancer avec `hls/ref/images_200.bin` (C-10) — C++ d'abord, RTL en tâche de fond (C-12).
 11. [ ] **D-03, D-04, D-06, D-08** : optimisations selon les rapports de Catapult (surface, latence, BRAM).

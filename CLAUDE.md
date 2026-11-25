@@ -7,6 +7,10 @@ Note < 10 sans démo sur carte ; minimum exigé : une convolution sur flux vidé
 Évaluation : rapport + interview 20 min à la dernière séance.
 
 Langue du projet : **français** (commentaires, messages, docstrings, commits, docs). Garder ce style.
+**Exception : tout texte AFFICHÉ (cout/cerr/printf de main, tb_hls, read_image ; puts et même commentaires des
+scripts Tcl Catapult ; sortie de hls/catapult_report.py) est en ASCII, sans accent ni caractère spécial** :
+Catapult et Questa/vsim affichent mal l'UTF-8 (« Ã© »), et Catapult réaffiche chaque ligne de Tcl exécutée,
+commentaire de fin de ligne compris. Les commentaires du C++ et des .py gardent leurs accents.
 
 ## État d'avancement (au 2026-11-20)
 
@@ -15,7 +19,7 @@ Langue du projet : **français** (commentaires, messages, docstrings, commits, d
 | 1. Référence Python | `python/` : CNN boucles + version numpy vectorisée, lecture CIFAR/coefs, mesure de dynamique | ✅ fini |
 | 2a. C++ virgule fixe | `cpp/` : même réseau en `ac_fixed<W,I,S>`, formats dans `cpp/config.hpp` | ✅ fini, ~89 % sur 200 img |
 | 2b. Exploration des formats | `Exploration/` : recherche auto du nb de bits minimal par format | ✅ 12 runs complets (+2 anciens), **non commité** (`?? Exploration/`) |
-| 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A-01…D-08) : A, B, C faits (code synthétisable bit-exact, testbench SCVerify, `hls/cnn.tcl`) | 🔄 à lancer sous Catapult à l'école, puis D |
+| 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A-01…D-08, C-10…C-12) : A, B, C faits ; 1er `go extract` OK à l'école le 2026-11-24 (latence 46,1 M cycles, ~130 RAMB18) | 🔄 SCVerify à refaire (C-10 corrigé), puis D |
 | 3. FPGA Vivado / Zybo Z7 | `fpga/` vide | ⏳ pas commencé |
 | Rapport | `rapport/` vide | ⏳ pas commencé |
 
@@ -57,7 +61,9 @@ cpp/               modèle C++ virgule fixe ; partie synthétisable (cnn.cpp, ut
   config.hpp       TOUS les formats : macros X_W / X_I (#ifndef → surchargeables par -D) + typedefs (regénéré par explore.py)
   utils.hpp/.cpp   templates sur tableaux C fixes : relu, convolution_feature, m_acc_hwc (perceptron), max_pool 3x3/2
   cnn.hpp/.cpp     KS (taille noyau, -DKS=3) + dimensions ; top Catapult cnn(input_t image[1728], out_t scores[10])
-  coeffs_k3/k5.hpp ROM des coefficients, GÉNÉRÉES par hls/gen_coeffs.py, incluses DANS cnn() (macros CNN_ROM_*)
+  coeffs_k3/k5.hpp ROM des coefficients (nombres du fichier, en double), GÉNÉRÉES par hls/gen_coeffs.py, incluses DANS cnn()
+  coeffs_k*_raw.hpp mêmes ROM DÉJÀ QUANTIFIÉES dans les formats de config.hpp (RomWord<T> = entier natif) : synthèse
+                   (CNN_ROM_RAW, défaut sous __SYNTHESIS__) ; #error si config.hpp a changé depuis → make coeffs
   read_image.*     load_image(path, n) → RawImage (double, CHW, crop+normalize), to_image(raw, tableau)
   main.cpp         CLI : ./main [nb_images=100] [k=5] [batch=data_batch_1.bin] [--order F] [--trace] [--dump F] ; k = KS
   tb_common.hpp    testbench seulement : signature des formats, écriture/lecture des scores de référence
@@ -79,10 +85,18 @@ doc/               SEI_CNN.pdf (sujet, 61 p.), BoiteAOutilsHLSImage.pdf (Catapul
 hls/include/       ac_fixed.h, ac_int.h (Mentor/Siemens AC datatypes) — inclus par cpp/config.hpp
 hls/AUDIT_HLS.md   audit du passage à Catapult : codes A (bloquant) B (structure) C (testbench/flot) D (QoR), plan
 hls/gen_coeffs.py  data/coef/*.txt → cpp/coeffs_k3.hpp, coeffs_k5.hpp (texte des nombres recopié tel quel)
-hls/cnn.tcl        script Catapult du CNN (fichiers, Zynq, 100 MHz, go extract, SCVerify) ; lancer depuis hls/work/
+hls/cnn.tcl        script Catapult du CNN (fichiers, Zynq, 100 MHz, go extract, project save, SCVerify C++, rapports) ; lancer depuis hls/work/
+hls/cnn_report.tcl procédures Tcl sourcées par cnn.tcl : cnn_report, cnn_summary, cnn_sim_cmd, cnn_sim_env (résultats sans GUI)
+hls/sim_rtl.sh     simulation RTL SCVerify hors Catapult (nohup) : latence lue dans rtl.rpt, compteur de cycles, rapports
+hls/sim_progress.tcl  script vsim (passé par la variable make QuestaSIM_MSIM_DOFILE) : avance par tranches et affiche
+                   [sim] cycle N / total (%) | image | durée | cycles/s | reste ; garde-fou si le DUT ne s'arrête pas
+hls/catapult_report.py  lit rtl.rpt / cycle.rpt / sim.log → tableau Markdown/JSON (latence, surface, DSP, slack, BRAM, boucles,
+                   SCVerify) ; --save hls/rapports copie les rapports bruts (Python standard, tourne à l'école)
+hls/rapports/      rapports Catapult sauvegardés par solution (<sol>_<date>/ : rtl.rpt, cycle.rpt, logs, resume.md), versionnés
 hls/tb_hls.cpp     testbench SCVerify (CCS_MAIN/CCS_DESIGN) : N images, compare à hls/ref/ ; env CNN_ROOT, CNN_TB_N
 hls/stub/          faux mc_scverify.h pour compiler tb_hls sur PC (jamais dans le chemin d'include de Catapult)
-hls/ref/           scores exacts de 200 images (config large, k=3/5) : référence de make nonreg et du testbench
+hls/ref/           scores exacts de 200 images (config large, k=3/5) : référence de make nonreg et du testbench ;
+                   images_200.bin = 200 premières images de data_batch_1 (versionnées : le testbench ne dépend pas de data/)
 hls/Demo_FIR/      démo Catapult de l'encadrant (FIR) ; hls/demoFir.tcl : script de la démo
 fpga/ rapport/ build/   vides (.gitkeep)
 ```
@@ -101,7 +115,9 @@ make tree-check      # vérifie l'arborescence imposée (liste blanche ROOT_OK d
 # HLS
 make nonreg          # non-régression bit-exacte du modèle C++ (200 img vs hls/ref/scores_k5.txt)
 make tb-hls ARGS=5   # testbench HLS sur PC (sans Catapult)
-make coeffs          # regénère les ROM cpp/coeffs_k*.hpp après un changement de data/coef/
+make coeffs          # regénère les ROM cpp/coeffs_k*.hpp ET coeffs_k*_raw.hpp : après un changement de data/coef/
+                     # OU DES FORMATS de config.hpp (sinon #error à la synthèse) ; puis make nonreg
+make hls-report ARGS="hls/rapports"   # résumé des rapports Catapult (= python3 hls/catapult_report.py …)
 # École : source hls/bash_mentor_24 ; mkdir -p hls/work && cd hls/work && catapult -shell -file ../cnn.tcl
 
 # Modèle C++
@@ -150,7 +166,8 @@ on peut lancer depuis n'importe quel dossier.
 - Chaque évaluation = compilation de `cpp/main.cpp + cpp/cnn.cpp` avec `-D<NOM>_W/_I -DKS=<k>` + objet commun
   `read_image.o`, puis `main N k batch --trace --order order.txt`.
 - **Cache** `runs/cache.jsonl` indexé par sha1(code C++ hors config.hpp, k, n, batch, config) : modifier
-  n'importe quel `cpp/*.?pp` (sauf config.hpp) invalide tout le cache (hash actuel `c44f86cd67` = celui des runs).
+  n'importe quel `cpp/*.?pp` (sauf config.hpp et `*_raw.hpp`) invalide tout le cache (hash des runs : `c44f86cd67` ;
+  hash actuel `15066452fd` depuis RomWord/rom_value, 2026-11-25 : code bit-exact, les anciens résultats restent valables).
 - Métrique en abscisse : bits moyens par valeur pondérés par le stockage (`mem`) ou par les lectures (`ops`).
 - Sessions reprenables (Ctrl-C propre, relancer la même commande). Runs ~1 h chacun avec 2 variables en parallèle.
 
@@ -168,9 +185,12 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
 - Ajouter un `.cpp` au modèle ⇒ mettre à jour `cpp/CMakeLists.txt` **et** `Exploration/explo/runner.py` (liste de compilation codée en dur).
 - `KS` est fixé à la compilation (défaut 5, dans `cnn.hpp`, pas dans `config.hpp` qui est regénéré) : `main` refuse un
   `k` différent ; build 3x3 : `cmake -DCMAKE_CXX_FLAGS=-DKS=3`.
-- Coefficients modifiés dans `data/coef/` ⇒ relancer `.venv/bin/python hls/gen_coeffs.py`. Les ROM sont en
-  `static const double` sur PC (converties au 1er appel) et en `static const ac_fixed` sous `__SYNTHESIS__` :
-  g++ met ~40 s / 1,3 Go à compiler la version `__SYNTHESIS__`, ne pas l'utiliser hors Catapult.
+- Coefficients (`data/coef/`) ou formats K*/B*/FCK/FCB de `config.hpp` modifiés ⇒ `make coeffs` puis `make nonreg`
+  (compare aussi `main_raw`, compilé avec les ROM de synthèse). Trois chemins de ROM (`cpp/cnn.cpp`) : PC = `double`
+  converties au 1er appel (indépendant des formats : l'exploration par `-D` marche sans regénérer) ; synthèse =
+  `RomWord` entiers (`coeffs_k*_raw.hpp`, 0,7 s de g++) ; secours `-DCNN_ROM_DOUBLE` (`ROM_FLAGS` dans cnn.tcl) =
+  anciens `ac_fixed` initialisés par des double (7,7 s / 1,1 Go de g++, 17 min de go analyze).
+  `utils` lit tout coefficient par `rom_value()` (identité pour un ac_fixed, set_slc pour un RomWord).
 - La partie synthétisable (cnn.cpp, utils.*, coeffs) : pas de `std::`, pas d'allocation, dimensions constantes.
   Toute modification doit rester **bit-exacte** (même ordre d'accumulation, quantification avant ReLU) : `make nonreg`.
   Si les formats de config.hpp changent, régénérer la référence (`main 200 5 data_batch_1.bin --dump hls/ref/scores_k5.txt`).
@@ -191,9 +211,13 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
   (16 bits) pour l'instant, optimisation plus tard (D-01). B-06 (budget BRAM) reporté.
 - C fait : `#include <ac_fixed.h>` partout (copie `hls/include/` via `-I` hors Catapult ; Exploration : `paths.INCLUDES`,
   hors `CXXFLAGS` pour garder le hash du cache indépendant de la machine), testbench `hls/tb_hls.cpp`, `hls/cnn.tcl`.
-- Prochaine étape : lancer `hls/cnn.tcl` sous Catapult. Le nom de bibliothèque Zynq (`FPGA_LIB`) y est SUPPOSÉ :
-  le vérifier dans la GUI. Cloner le dépôt dans un chemin SANS espace (SCVerify/make). Puis D (pipeline, mémoires).
-- Outils école : Catapult 10.5c, Questa, Precision, Vivado 2017.1 (scripts d'environnement dans `doc/hls/bash_*`,
-  chemins `/softslin/...`). Cible : Zybo Z7 (Zynq), canevas de plateformes fournis par l'encadrant
+- `hls/cnn.tcl` passe jusqu'à `go extract` (bibliothèque `mgc_Xilinx-ZYNQ-1_beh` validée). `go analyze` durait 17 min
+  avec les anciennes ROM ; avec les ROM entières (RomWord), durée à remesurer (12x plus rapide sous g++). Directives
+  seules : pas de réanalyse (`project load` + `solution new -state assembly`, voir fin de cnn.tcl) ; formats ou code
+  du design modifiés : `make coeffs` puis relancer cnn.tcl (go analyze obligatoire). Simulation RTL : heures par image tant que la latence est de 46 M cycles → lancée à part (`cnn_sim_cmd`).
+  Résultats sans GUI : `hls/rapports/*/resume.md`. Cloner dans un chemin SANS espace (SCVerify/make). ~130 RAMB18 estimés :
+  ~46 % de notre carte. Puis D (pipeline, mémoires).
+- Outils école (constatés le 2026-11-24) : **Catapult 2024.2**, Questa 2024.2_2, Precision 2024.2 (`hls/bash_mentor_24`),
+  Vivado 2017.1 (`doc/hls/bash_vivado_17`), chemins `/softslin/...`. Cible : **Zybo Z7-20, XC7Z020-1CLG400C** (vérifié sur la boîte le 2026-11-25 ; 280 RAMB18, 220 DSP, 53 200 LUT), canevas de plateformes fournis par l'encadrant
   (`/tp-fmr/smancini/SEI_SoC_CNN/`). Méthodo HLS + plateformes : `doc/BoiteAOutilsHLSImage.pdf`.
 - Normalisation de l'image : pas obligatoire en matériel (peut rester côté ARM).

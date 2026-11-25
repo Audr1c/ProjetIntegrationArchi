@@ -1,4 +1,15 @@
-"""Génère les ROM de coefficients du CNN pour la HLS : cpp/coeffs_k3.hpp et cpp/coeffs_k5.hpp.
+"""Génère les ROM de coefficients du CNN pour la HLS : cpp/coeffs_k3.hpp et cpp/coeffs_k5.hpp
+(nombres du fichier, indépendants des formats), et cpp/coeffs_k3_raw.hpp, coeffs_k5_raw.hpp
+(entiers déjà quantifiés dans les formats de cpp/config.hpp : utilisés en synthèse).
+
+À RELANCER (make coeffs) après tout changement des formats K*, B*, FCK, FCB de config.hpp
+(ex. explore.py select --apply) : sinon la synthèse s'arrête sur un #error explicite.
+
+Encodage brut : r = floor(x * 2^F) replié sur W bits signés (F = W - I), c.-à-d. exactement
+ac_fixed<W, I, true, AC_TRN, AC_WRAP>(x) : x * 2^F est exact en double, floor = troncature vers -inf,
+le modulo 2^W = débordement AC_WRAP. Vérifié par make nonreg (cible main_raw) et par SCVerify.
+Pourquoi : 74 000 objets ac_fixed initialisés dans le code font durer go analyze ~17 min ; un tableau
+d'entiers natifs (RomWord, voir cpp/utils.hpp) se compile ~20x plus vite (mesure g++).
 
 Usage (depuis la racine du dépôt) :
     .venv/bin/python hls/gen_coeffs.py
@@ -21,6 +32,7 @@ Rangement (identique à l'ancien to_kernel de cpp/extract_coeff.hpp) :
     perceptron: fichier (180, 10)     ->  ligne par ligne, value[k * 10 + j]
 """
 
+import math
 import os
 import re
 import sys
@@ -34,17 +46,33 @@ from extractCoeff import infer_shape  # noqa: E402
 NUMBER = r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?"     # même expression que python/extractCoeff.py
 PER_LINE = 8
 
-# (tenseur du fichier, nom C++, type C++, taille C++)
+# (tenseur du fichier, nom C++, type C++, taille C++, préfixe des macros de format dans config.hpp)
 LAYERS = [
-    ("conv1/weights",  "ker1", "ker1_t",  "K1_SIZE"),
-    ("conv1/biases",   "bia1", "bias1_t", "C1"),
-    ("conv2/weights",  "ker2", "ker2_t",  "K2_SIZE"),
-    ("conv2/biases",   "bia2", "bias2_t", "C2"),
-    ("conv3/weights",  "ker3", "ker3_t",  "K3_SIZE"),
-    ("conv3/biases",   "bia3", "bias3_t", "C3"),
-    ("local3/weights", "fck",  "fck_t",   "FCK_SIZE"),
-    ("local3/biases",  "fcb",  "fcb_t",   "N_CLASSES"),
+    ("conv1/weights",  "ker1", "ker1_t",  "K1_SIZE",   "K1"),
+    ("conv1/biases",   "bia1", "bias1_t", "C1",        "B1"),
+    ("conv2/weights",  "ker2", "ker2_t",  "K2_SIZE",   "K2"),
+    ("conv2/biases",   "bia2", "bias2_t", "C2",        "B2"),
+    ("conv3/weights",  "ker3", "ker3_t",  "K3_SIZE",   "K3"),
+    ("conv3/biases",   "bia3", "bias3_t", "C3",        "B3"),
+    ("local3/weights", "fck",  "fck_t",   "FCK_SIZE",  "FCK"),
+    ("local3/biases",  "fcb",  "fcb_t",   "N_CLASSES", "FCB"),
 ]
+
+
+def read_formats(path):
+    """{'K1': (W, I), ...} lus dans les #define de config.hpp (première définition)."""
+    macros = {}
+    with open(path) as f:
+        for m in re.finditer(r"^\s*#define\s+(\w+)\s+(-?\d+)\s*$", f.read(), flags=re.MULTILINE):
+            macros.setdefault(m.group(1), int(m.group(2)))
+    return {p: (macros[p + "_W"], macros[p + "_I"]) for *_, p in LAYERS}
+
+
+def raw_value(text, w, i):
+    """Motif de ac_fixed<w, i, true, AC_TRN, AC_WRAP>(double(text)), en entier signé."""
+    r = math.floor(math.ldexp(float(text), w - i))     # exact : multiplication par une puissance de 2
+    r = (r + (1 << (w - 1))) % (1 << w) - (1 << (w - 1))
+    return r
 
 
 def parse_text_tensors(path):
@@ -74,6 +102,7 @@ def c_array(ctype, name, size, values):
 def generate(k):
     src = f"data/coef/CNN_coeff_{k}x{k}.txt"
     tensors = parse_text_tensors(os.path.join(ROOT, src))
+    flat = {}
     out = [
         "/*",
         f" * Coefficients du CNN, noyaux {k}x{k} : ROM de la fonction top cnn().",
@@ -91,19 +120,56 @@ def generate(k):
         "#ifdef CNN_ROM_BEGIN",
         "",
     ]
-    for tname, cname, ctype, csize in LAYERS:
+    for tname, cname, ctype, csize, _ in LAYERS:
         t = tensors[tname]
         if t.ndim == 4:
             if t.shape[0] != k or t.shape[1] != k:
                 sys.exit(f"{src} : {tname} de forme {t.shape}, noyau {k}x{k} attendu")
             t = t.transpose(3, 2, 0, 1)          # (M, N, L, C) -> (C, L, M, N)
         out += [c_array(ctype, cname, csize, list(t.reshape(-1))), ""]
+        flat[cname] = list(t.reshape(-1))
     out += ["#endif // CNN_ROM_BEGIN", ""]
     dst = os.path.join(ROOT, "cpp", f"coeffs_k{k}.hpp")
     with open(dst, "w") as f:
         f.write("\n".join(out))
     n = sum(tensors[t].size for t, *_ in LAYERS)
     print(f"{os.path.relpath(dst, ROOT)} : {n} coefficients")
+    generate_raw(k, src, flat)
+
+
+def generate_raw(k, src, flat):
+    formats = read_formats(os.path.join(ROOT, "cpp", "config.hpp"))
+    fmt_txt = " ".join(f"{p}<{w},{i}>" for p, (w, i) in formats.items())
+    cond = " || ".join(f"{p}_W != {w} || {p}_I != {i}" for p, (w, i) in formats.items())
+    name = f"coeffs_k{k}_raw.hpp"
+    out = [
+        "/*",
+        f" * Coefficients du CNN, noyaux {k}x{k}, DÉJÀ QUANTIFIÉS : ROM de cnn() en synthèse (CNN_ROM_RAW).",
+        f" * FICHIER GÉNÉRÉ par hls/gen_coeffs.py depuis {src} et cpp/config.hpp : ne pas modifier à la main.",
+        f" * Formats <W,I> : {fmt_txt}",
+        " * Chaque entier = motif binaire de ac_fixed<W, I, true>(x) (AC_TRN, AC_WRAP), lu par rom_value().",
+        " * Même rangement que coeffs_k*.hpp. À inclure DANS le corps de cnn() (cpp/cnn.cpp).",
+        " */",
+        "",
+        "#ifdef CNN_ROM_RAW",
+        "",
+        f"#if {cond}",
+        f'#error "{name} genere pour d autres formats que config.hpp : relancer make coeffs"',
+        "#endif",
+        "",
+    ]
+    for _, cname, ctype, csize, prefix in LAYERS:
+        w, i = formats[prefix]
+        vals = [raw_value(v, w, i) for v in flat[cname]]
+        out.append(f"static const RomWord<{ctype}> {cname}[{csize}] = {{   // {len(vals)} valeurs, ac_fixed<{w},{i}>")
+        for j in range(0, len(vals), 16):
+            out.append("    " + " ".join(f"{{{v}}}," for v in vals[j:j + 16]))
+        out += ["};", ""]
+    out += ["#endif // CNN_ROM_RAW", ""]
+    dst = os.path.join(ROOT, "cpp", name)
+    with open(dst, "w") as f:
+        f.write("\n".join(out))
+    print(f"{os.path.relpath(dst, ROOT)} : formats {fmt_txt}")
 
 
 if __name__ == "__main__":

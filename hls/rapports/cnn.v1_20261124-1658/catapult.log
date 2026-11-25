@@ -1,0 +1,1289 @@
+//  Catapult Ultra Synthesis 2024.2/1130128 (Production Release) Mon Aug 26 21:59:12 PDT 2024
+//  
+//          Copyright (c) Siemens EDA, 1996-2024, All Rights Reserved.
+//                        UNPUBLISHED, LICENSED SOFTWARE.
+//             CONFIDENTIAL AND PROPRIETARY INFORMATION WHICH IS THE
+//                   PROPERTY OF SIEMENS EDA OR ITS LICENSORS.
+//  
+//  Running on Linux xph3sei706@ocaepc52:710378 5.4.0-216-generic x86_64 aol
+//  
+//  Package information: SIFLIBS v27.2_0.0, HLS_PKGS v27.2_0.0, 
+//                       SIF_TOOLKITS v27.2_0.0, SIF_XILINX v27.2_0.0, 
+//                       SIF_ALTERA v27.2_0.0, CCS_LIBS v27.2_0.0, 
+//                       CDS_PPRO v2024.1_3, CDS_DesignChecker v2024.2, 
+//                       CDS_OASYS v21.1_3.1, CDS_PSR v24.1_0.20, 
+//                       DesignPad v2.78_1.0, DesignAnalyzer 2024.2/1129066
+//  
+//  Start time Tue Nov 24 16:58:20 2026
+# -------------------------------------------------
+# Logging session transcript to file "/tmp/log710378fc2763aa.0"
+dofile ../cnn.tcl
+# > set ROOT [file normalize [file join [file dirname [info script]] ..]]   ;# racine du dépôt
+# /tp/xph3sei/xph3sei706/ProjetIntegrationArchi
+# > set CPP  [file join $ROOT cpp]
+# /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/cpp
+# > set HLS  [file join $ROOT hls]
+# /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls
+# > set KS 5                    ;# taille des noyaux (3 ou 5) -> coeffs_k$KS.hpp, hls/ref/scores_k$KS.txt
+# 5
+# > set TB_IMAGES 2             ;# images simulées par SCVerify (~10,7 M MAC par image en RTL : rester petit)
+# 2
+# > set CLOCK_NS 10.0           ;# 100 MHz
+# 10.0
+# > set FPGA_LIB  mgc_Xilinx-ZYNQ-1_beh
+# mgc_Xilinx-ZYNQ-1_beh
+# > set FPGA_OPTS {-rtlsyntool Precision -manufacturer Xilinx -family ZYNQ -speed -1 -part xc7z020clg400-1}
+# -rtlsyntool Precision -manufacturer Xilinx -family ZYNQ -speed -1 -part xc7z020clg400-1
+# > set ::env(CNN_ROOT) $ROOT
+# /tp/xph3sei/xph3sei706/ProjetIntegrationArchi
+# > set ::env(CNN_TB_N) $TB_IMAGES
+# 2
+# > project new
+# > solution new -state initial
+# Info: Branching solution 'solution.v2' at state 'initial' (PRJ-2)
+# solution.v2
+# > solution options defaults
+# > solution options set /Input/TargetPlatform x86_64
+# x86_64
+# > solution options set /Input/CppStandard c++11
+# c++11
+# > solution options set /Input/SearchPath /usr/include/x86_64-linux-gnu/
+# /usr/include/x86_64-linux-gnu/
+# > solution options set /Input/CompilerFlags "-DKS=$KS"
+# -DKS=5
+# > solution options set /Output/OutputVerilog false      ;# RTL en VHDL, comme la démo
+# false
+# > flow package require /SCVerify
+# 10.4
+# > solution file add [file join $CPP cnn.cpp]            -type C++
+# /INPUTFILES/1
+# > solution file add [file join $CPP cnn.hpp]            -type CHEADER
+# /INPUTFILES/2
+# > solution file add [file join $CPP config.hpp]         -type CHEADER
+# /INPUTFILES/3
+# > solution file add [file join $CPP utils.hpp]          -type CHEADER
+# /INPUTFILES/4
+# > solution file add [file join $CPP utils.cpp]          -type CHEADER   ;# templates, inclus par utils.hpp
+# /INPUTFILES/5
+# > solution file add [file join $HLS tb_hls.cpp]         -type C++     -exclude true
+# /INPUTFILES/6
+# > solution file add [file join $CPP read_image.cpp]     -type C++     -exclude true
+# /INPUTFILES/7
+# > solution file add [file join $CPP read_image.hpp]     -type CHEADER -exclude true
+# /INPUTFILES/8
+# > solution file add [file join $CPP tb_common.hpp]      -type CHEADER -exclude true
+# /INPUTFILES/9
+# > directive set -DESIGN_GOAL area
+# /DESIGN_GOAL area
+# > directive set -SPECULATE true
+# /SPECULATE true
+# > directive set -MERGEABLE true
+# /MERGEABLE true
+# > directive set -REGISTER_THRESHOLD 256
+# /REGISTER_THRESHOLD 256
+# > directive set -MEM_MAP_THRESHOLD 32     ;# tableaux > 32 mots -> mémoires (feature maps)
+# /MEM_MAP_THRESHOLD 32
+# > directive set -ROM_THRESHOLD 64         ;# tableaux constants > 64 mots -> ROM (coefficients)
+# /ROM_THRESHOLD 64
+# > directive set -UNROLL no
+# /UNROLL no
+# > directive set -IO_MODE super
+# /IO_MODE super
+# > directive set -FSM_ENCODING none
+# /FSM_ENCODING none
+# > directive set -NO_X_ASSIGNMENTS true
+# /NO_X_ASSIGNMENTS true
+# > directive set -SAFE_FSM false
+# /SAFE_FSM false
+# > directive set -TRANSACTION_DONE_SIGNAL true
+# /TRANSACTION_DONE_SIGNAL true
+# > directive set -TRANSACTION_SYNC ready
+# /TRANSACTION_SYNC ready
+# > directive set -CLOCK_OVERHEAD 20.000000
+# /CLOCK_OVERHEAD 20.000000
+# > directive set -OPT_CONST_MULTS use_library
+# /OPT_CONST_MULTS use_library
+# > directive set -CHARACTERIZE_ROM false
+# /CHARACTERIZE_ROM false
+# > directive set -PROTOTYPE_ROM true
+# /PROTOTYPE_ROM true
+# > go analyze
+# Info: Starting transformation 'analyze' on solution 'solution.v2' (SOL-8)
+# Creating project directory '/tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/'. (PRJ-1)
+# Moving session transcript to file "/tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/catapult.log"
+# Front End called with arguments: -I/usr/include/x86_64-linux-gnu/ -- /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/cpp/utils.cpp /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/cpp/utils.hpp /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/cpp/config.hpp /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/cpp/cnn.hpp /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/cpp/cnn.cpp (CIN-69)
+# Edison Design Group C++/C Front End - Version 6.6 (CIN-1)
+# $PROJECT_HOME/../../cpp/cnn.cpp(38): Pragma 'hls_design<top>' detected on routine 'cnn' (CIN-6)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 28.71 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 58.71 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 88.85 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 118.85 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 148.90 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 178.90 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 208.90 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 238.93 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 268.93 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 298.94 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 328.94 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 358.94 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 388.95 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 418.95 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 448.95 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 478.95 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 508.96 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 538.96 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 569.00 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 599.01 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 629.02 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 659.02 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 689.02 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 719.02 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 749.03 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 779.04 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 809.04 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 839.03 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 869.03 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 899.04 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 929.04 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 959.04 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Info: Running transformation 'analyze' on solution 'solution.v2': elapsed time 989.04 seconds, memory usage 2066772kB, peak memory usage 2066772kB (SOL-15)
+# Source file analysis completed (CIN-68)
+# Info: Completed transformation 'analyze' on solution 'solution.v2': elapsed time 1016.41 seconds, memory usage 2001236kB, peak memory usage 2066772kB (SOL-9)
+# > directive set -DESIGN_HIERARCHY cnn
+# solution design set cnn -top (HC-8)
+# /DESIGN_HIERARCHY cnn
+# > go compile
+# Info: Starting transformation 'compile' on solution 'cnn.v1' (SOL-8)
+# Generating synthesis internal form... (CIN-3)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Found top design routine 'cnn' specified by directive (CIN-52)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Synthesizing routine 'cnn' (CIN-13)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Inlining routine 'cnn' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(50): Inlining routine 'convolution_feature<3, 24, 24, 64, 5, 0, 0, 16, 4, true, 16, 3, true, 16, 4, true, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<24, 24, 16, 4, true>' (CIN-14)
+# Info: Running transformation 'compile' on solution 'cnn.v1': elapsed time 26.63 seconds, memory usage 2300124kB, peak memory usage 2304988kB (SOL-15)
+# $PROJECT_HOME/../../cpp/utils.cpp(13): Inlining routine 'relu<36864, 16, 8, true>' (CIN-14)
+# $MGC_HOME/shared/include/ac_fixed.h(1383): Inlining routine 'operator<<16, 8, true, AC_TRN, AC_WRAP>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(135): Inlining routine 'max_pool<64, 24, 24, 16, 8, true, 16, 8, false>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<24, 24, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<24, 24, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(50): Inlining routine 'convolution_feature<64, 12, 12, 32, 5, 0, 0, 16, 8, false, 16, 3, true, 16, 4, true, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<12, 12, 16, 8, false>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(13): Inlining routine 'relu<4608, 16, 8, true>' (CIN-14)
+# $MGC_HOME/shared/include/ac_fixed.h(1383): Inlining routine 'operator<<16, 8, true, AC_TRN, AC_WRAP>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(135): Inlining routine 'max_pool<32, 12, 12, 16, 8, true, 16, 8, false>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<12, 12, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<12, 12, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(50): Inlining routine 'convolution_feature<32, 6, 6, 20, 5, 0, 0, 16, 8, false, 16, 3, true, 16, 4, true, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<6, 6, 16, 8, false>' (CIN-14)
+# Info: Running transformation 'compile' on solution 'cnn.v1': elapsed time 56.63 seconds, memory usage 2445104kB, peak memory usage 2445104kB (SOL-15)
+# $PROJECT_HOME/../../cpp/utils.cpp(13): Inlining routine 'relu<720, 16, 8, true>' (CIN-14)
+# $MGC_HOME/shared/include/ac_fixed.h(1383): Inlining routine 'operator<<16, 8, true, AC_TRN, AC_WRAP>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(135): Inlining routine 'max_pool<20, 6, 6, 16, 8, true, 16, 8, false>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<6, 6, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(27): Inlining routine 'get_valid_pixel<6, 6, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/utils.cpp(94): Inlining routine 'm_acc_hwc<20, 3, 3, 10, 0, 0, 16, 8, false, 16, 1, true, 16, 3, true, 16, 8, true>' (CIN-14)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Optimizing block '/cnn' ... (CIN-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(40): INOUT port 'image' is only used as an input. (OPT-10)
+# $PROJECT_HOME/../../cpp/cnn.cpp(41): INOUT port 'scores' is only used as an output. (OPT-11)
+# Info: Running transformation 'compile' on solution 'cnn.v1': elapsed time 85.84 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-15)
+# Warning: $PROJECT_HOME/../../cpp/coeffs_k5.hpp(619): Reducing the number of bits used to represent array elements of 'bia1.rom', from '16' bits to '15' bits. (MEM-87)
+# Warning: To disable array compaction optimization, please use 'directive set -DA_DISABLE_RESIZE_MEM true'. Disabling the optimization can have QofR implications. (MEM-99)
+# Warning: If the array is transformed at later stages using WORD_WIDTH, BLOCK_SIZE, INTERLEAVE directive, the new array dimensions will be used. Please review the applicable constraint settings to get the desired RAM/ROM layout. (MEM-100)
+# Warning: $PROJECT_HOME/../../cpp/coeffs_k5.hpp(630): Reducing the number of bits used to represent array elements of 'ker2.rom', from '16' bits to '14' bits. (MEM-87)
+# Warning: To disable array compaction optimization, please use 'directive set -DA_DISABLE_RESIZE_MEM true'. Disabling the optimization can have QofR implications. (MEM-99)
+# Warning: If the array is transformed at later stages using WORD_WIDTH, BLOCK_SIZE, INTERLEAVE directive, the new array dimensions will be used. Please review the applicable constraint settings to get the desired RAM/ROM layout. (MEM-100)
+# Warning: $PROJECT_HOME/../../cpp/coeffs_k5.hpp(7033): Reducing the number of bits used to represent array elements of 'bia2.rom', from '16' bits to '15' bits. (MEM-87)
+# Warning: To disable array compaction optimization, please use 'directive set -DA_DISABLE_RESIZE_MEM true'. Disabling the optimization can have QofR implications. (MEM-99)
+# Warning: If the array is transformed at later stages using WORD_WIDTH, BLOCK_SIZE, INTERLEAVE directive, the new array dimensions will be used. Please review the applicable constraint settings to get the desired RAM/ROM layout. (MEM-100)
+# Warning: $PROJECT_HOME/../../cpp/coeffs_k5.hpp(7040): Reducing the number of bits used to represent array elements of 'ker3.rom', from '16' bits to '15' bits. (MEM-87)
+# Warning: To disable array compaction optimization, please use 'directive set -DA_DISABLE_RESIZE_MEM true'. Disabling the optimization can have QofR implications. (MEM-99)
+# Warning: If the array is transformed at later stages using WORD_WIDTH, BLOCK_SIZE, INTERLEAVE directive, the new array dimensions will be used. Please review the applicable constraint settings to get the desired RAM/ROM layout. (MEM-100)
+# Warning: $PROJECT_HOME/../../cpp/coeffs_k5.hpp(9043): Reducing the number of bits used to represent array elements of 'bia3.rom', from '16' bits to '15' bits. (MEM-87)
+# Warning: To disable array compaction optimization, please use 'directive set -DA_DISABLE_RESIZE_MEM true'. Disabling the optimization can have QofR implications. (MEM-99)
+# Warning: If the array is transformed at later stages using WORD_WIDTH, BLOCK_SIZE, INTERLEAVE directive, the new array dimensions will be used. Please review the applicable constraint settings to get the desired RAM/ROM layout. (MEM-100)
+# Warning: $PROJECT_HOME/../../cpp/coeffs_k5.hpp(9049): Reducing the number of bits used to represent array elements of 'fck.rom', from '16' bits to '14' bits. (MEM-87)
+# Warning: To disable array compaction optimization, please use 'directive set -DA_DISABLE_RESIZE_MEM true'. Disabling the optimization can have QofR implications. (MEM-99)
+# Warning: If the array is transformed at later stages using WORD_WIDTH, BLOCK_SIZE, INTERLEAVE directive, the new array dimensions will be used. Please review the applicable constraint settings to get the desired RAM/ROM layout. (MEM-100)
+# Warning: $PROJECT_HOME/../../cpp/coeffs_k5.hpp(9277): Reducing the number of bits used to represent array elements of 'fcb.rom', from '16' bits to '15' bits. (MEM-87)
+# Warning: To disable array compaction optimization, please use 'directive set -DA_DISABLE_RESIZE_MEM true'. Disabling the optimization can have QofR implications. (MEM-99)
+# Warning: If the array is transformed at later stages using WORD_WIDTH, BLOCK_SIZE, INTERLEAVE directive, the new array dimensions will be used. Please review the applicable constraint settings to get the desired RAM/ROM layout. (MEM-100)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' iterated at most 5 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' iterated at most 5 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for' iterated at most 24 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for' iterated at most 24 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for' iterated at most 64 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Loop '/cnn/core/relu<36864,16,8,true>:for' iterated at most 36864 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for' iterated at most 12 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for' iterated at most 12 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for' iterated at most 64 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' iterated at most 5 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' iterated at most 5 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for' iterated at most 64 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for' iterated at most 12 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for' iterated at most 12 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for' iterated at most 32 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Loop '/cnn/core/relu<4608,16,8,true>:for' iterated at most 4608 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for' iterated at most 6 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for' iterated at most 6 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for' iterated at most 32 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' iterated at most 5 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' iterated at most 5 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for' iterated at most 32 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for' iterated at most 6 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for' iterated at most 6 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for' iterated at most 20 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Loop '/cnn/core/relu<720,16,8,true>:for' iterated at most 720 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for' iterated at most 20 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(108): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for' iterated at most 10 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(116): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for' iterated at most 10 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(113): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for' iterated at most 20 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(112): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(111): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1' iterated at most 3 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(120): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2' iterated at most 10 times. (LOOP-2)
+# $PROJECT_HOME/../../cpp/utils.cpp(109): Detected constant initialization of array 'm_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:acc', optimizing loop 'm_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for' (LOOP-12)
+# Design 'cnn' was read (SOL-1)
+# Makefile for Original Design + Testbench written to file './scverify/Verify_orig_cxx_osci.mk'
+# Info: CDesignChecker Shell script written to '/tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1/CDesignChecker/design_checker.sh'
+# Info: Completed transformation 'compile' on solution 'cnn.v1': elapsed time 91.35 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'compile': Total ops = 623, Real ops = 196, Vars = 101 (SOL-21)
+# > if {[catch {solution library add $FPGA_LIB -- {*}$FPGA_OPTS} err]} {
+# >     puts "\n*** Bibliothèque FPGA '$FPGA_LIB' introuvable : corriger FPGA_LIB / FPGA_OPTS dans cnn.tcl"
+# >     puts "*** (Task Bar > Libraries dans la GUI, puis recopier la commande du log)\n$err"
+# >     error $err
+# > }
+# > solution library add Xilinx_RAMS
+# > solution library add Xilinx_ROMS
+# > go libraries
+# Info: Starting transformation 'libraries' on solution 'cnn.v1' (SOL-8)
+# Info: Please set ComponentLibs/TechLibSearchPath to enable flows that use downstream synthesis tools (LIB-220)
+# Reading component library '$MGC_HOME/pkgs/siflibs/mgc_busdefs.lib' [mgc_busdefs]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/siflibs/stdops.lib' [STDOPS]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/siflibs/fpops.lib' [FPOPS]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/siflibs/ccs_dw_ops.lib' [CCS_DW_OPS]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/siflibs/ccs_ioport.lib' [ccs_ioport]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/siflibs/mgc_ioport.lib' [mgc_ioport]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/cds_assert/assert_ops.lib' [ASSERT_OPS]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/cds_assert/assert_mods.lib' [assert_mods]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/siflibs/ccs_connections.lib' [ccs_connections]... (LIB-49)
+# Reading component library '$MGC_HOME/pkgs/ccs_xilinx/mgc_Xilinx-ZYNQ-1_beh.lib' [mgc_Xilinx-ZYNQ-1_beh]... (LIB-49)
+# Warning: Component library 'mgc_Xilinx-ZYNQ-1_beh' created with a newer version of Catapult Library Builder, 2025.1/1129627 > 2024.2/1130128 (LIB-83)
+# Warning: Detected an old component library 'mgc_Xilinx-ZYNQ-1_beh' - it is recommended that the user update this component library to the latest version. It can be done by reading this old component library in Catapult Library Builder (2024.2/1130128 or later) and saving the library into the target file. (LIB-82)
+# Reading component library '$MGC_HOME/pkgs/ccs_xilinx/Xilinx_RAMS.lib' [Xilinx_RAMS]... (LIB-49)
+# Warning: Component library 'Xilinx_RAMS' created with a newer version of Catapult Library Builder, 2025.1/1129627 > 2024.2/1130128 (LIB-83)
+# Reading component library '$MGC_HOME/pkgs/ccs_xilinx/Xilinx_ROMS.lib' [Xilinx_ROMS]... (LIB-49)
+# Info: Completed transformation 'libraries' on solution 'cnn.v1': elapsed time 1.52 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'libraries': Total ops = 623, Real ops = 196, Vars = 101 (SOL-21)
+# > directive set -CLOCKS [list clk [list -CLOCK_PERIOD $CLOCK_NS -CLOCK_EDGE rising -CLOCK_HIGH_TIME [expr {$CLOCK_NS / 2}] -CLOCK_OFFSET 0.000000 -CLOCK_UNCERTAINTY 0.0 -RESET_KIND sync -RESET_SYNC_NAME rst -RESET_SYNC_ACTIVE high -RESET_ASYNC_NAME arst_n -RESET_ASYNC_ACTIVE low -ENABLE_NAME {} -ENABLE_ACTIVE high]]
+# /CLOCKS {clk {-CLOCK_PERIOD 10.0 -CLOCK_EDGE rising -CLOCK_HIGH_TIME 5.0 -CLOCK_OFFSET 0.000000 -CLOCK_UNCERTAINTY 0.0 -RESET_KIND sync -RESET_SYNC_NAME rst -RESET_SYNC_ACTIVE high -RESET_ASYNC_NAME arst_n -RESET_ASYNC_ACTIVE low -ENABLE_NAME {} -ENABLE_ACTIVE high}}
+# > directive set /cnn -START_FLAG start
+# /cnn/START_FLAG start
+# > directive set /cnn -READY_FLAG ready
+# /cnn/READY_FLAG ready
+# > directive set /cnn -DONE_FLAG done
+# /cnn/DONE_FLAG done
+# > go assembly
+# Info: Starting transformation 'assembly' on solution 'cnn.v1' (SOL-8)
+# Info: Completed transformation 'assembly' on solution 'cnn.v1': elapsed time 1.70 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'assembly': Total ops = 624, Real ops = 197, Vars = 103 (SOL-21)
+# > go architect
+# Info: Starting transformation 'loops' on solution 'cnn.v1' (SOL-8)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Loop '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Loop '/cnn/core/relu<36864,16,8,true>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Loop '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Loop '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Loop '/cnn/core/relu<4608,16,8,true>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Loop '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Loop '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Loop '/cnn/core/relu<720,16,8,true>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Loop '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(116): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(113): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(112): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(111): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(120): Loop '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2' is left rolled. (LOOP-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Loop '/cnn/core/main' is left rolled. (LOOP-4)
+# Info: Completed transformation 'loops' on solution 'cnn.v1': elapsed time 1.65 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'loops': Total ops = 632, Real ops = 197, Vars = 107 (SOL-21)
+# Info: Starting transformation 'memories' on solution 'cnn.v1' (SOL-8)
+# $PROJECT_HOME/../../cpp/cnn.cpp(53): Memory Resource '/cnn/core/image2:rsc' (from var: image2) mapped to 'Xilinx_RAMS.BLOCK_1R1W_RBW' (size: 36864 x 16). (MEM-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(54): Memory Resource '/cnn/core/image3:rsc' (from var: image3) mapped to 'Xilinx_RAMS.BLOCK_1R1W_RBW' (size: 9216 x 16). (MEM-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(55): Memory Resource '/cnn/core/image4:rsc' (from var: image4) mapped to 'Xilinx_RAMS.BLOCK_1R1W_RBW' (size: 4608 x 16). (MEM-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(56): Memory Resource '/cnn/core/image5:rsc' (from var: image5) mapped to 'Xilinx_RAMS.BLOCK_1R1W_RBW' (size: 1152 x 16). (MEM-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(57): Memory Resource '/cnn/core/image6:rsc' (from var: image6) mapped to 'Xilinx_RAMS.BLOCK_1R1W_RBW' (size: 720 x 16). (MEM-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(58): Memory Resource '/cnn/core/image7:rsc' (from var: image7) mapped to 'Xilinx_RAMS.BLOCK_1R1W_RBW' (size: 180 x 16). (MEM-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(40): Memory Resource '/cnn/image:rsc' (from var: image) mapped to 'Xilinx_RAMS.BLOCK_1R1W_RBW' (size: 1728 x 16). (MEM-4)
+# $PROJECT_HOME/../../cpp/cnn.cpp(41): I/O-Port Resource '/cnn/scores:rsc' (from var: scores) mapped to 'ccs_ioport.ccs_out' (size: 160). (MEM-2)
+# $PROJECT_HOME/../../cpp/coeffs_k5.hpp(16): ROM Resource '/cnn/ker1.rom:rsc' (from var: ker1.rom) mapped to 'Xilinx_ROMS.mgc_rom' (size: 4800 x 16). (MEM-10)
+# $PROJECT_HOME/../../cpp/coeffs_k5.hpp(619): ROM Resource '/cnn/bia1.rom:rsc' (from var: bia1.rom) mapped to 'Xilinx_ROMS.mgc_rom' (size: 64 x 15). (MEM-10)
+# $PROJECT_HOME/../../cpp/coeffs_k5.hpp(630): ROM Resource '/cnn/ker2.rom:rsc' (from var: ker2.rom) mapped to 'Xilinx_ROMS.mgc_rom' (size: 51200 x 14). (MEM-10)
+# $PROJECT_HOME/../../cpp/coeffs_k5.hpp(7033): ROM Resource '/cnn/bia2.rom:rsc' (from var: bia2.rom) mapped to 'Xilinx_ROMS.mgc_rom' (size: 32 x 15). (MEM-10)
+# $PROJECT_HOME/../../cpp/coeffs_k5.hpp(7040): ROM Resource '/cnn/ker3.rom:rsc' (from var: ker3.rom) mapped to 'Xilinx_ROMS.mgc_rom' (size: 16000 x 15). (MEM-10)
+# $PROJECT_HOME/../../cpp/coeffs_k5.hpp(9049): ROM Resource '/cnn/fck.rom:rsc' (from var: fck.rom) mapped to 'Xilinx_ROMS.mgc_rom' (size: 1800 x 14). (MEM-10)
+# Loop '/cnn/core/image4:vinit' is merged and folded into Loop 'image3:vinit' (LOOP-9)
+# Loop '/cnn/core/image6:vinit' is merged and folded into Loop 'image5:vinit' (LOOP-9)
+# Info: Completed transformation 'memories' on solution 'cnn.v1': elapsed time 11.51 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'memories': Total ops = 829, Real ops = 252, Vars = 148 (SOL-21)
+# Info: Starting transformation 'cluster' on solution 'cnn.v1' (SOL-8)
+# Info: Completed transformation 'cluster' on solution 'cnn.v1': elapsed time 0.49 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'cluster': Total ops = 829, Real ops = 252, Vars = 148 (SOL-21)
+# Info: Starting transformation 'architect' on solution 'cnn.v1' (SOL-8)
+# Design 'cnn' contains '380' real operations. (SOL-11)
+# Info: Completed transformation 'architect' on solution 'cnn.v1': elapsed time 8.60 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'architect': Total ops = 1645, Real ops = 380, Vars = 283 (SOL-21)
+# > go allocate
+# Info: Starting transformation 'allocate' on solution 'cnn.v1' (SOL-8)
+# Performing concurrent resource allocation and scheduling on '/cnn/core' (CRAAS-1)
+# Info: Select qualified components for data operations ... (CRAAS-3)
+# Info: Apply resource constraints on data operations ... (CRAAS-4)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Prescheduled LOOP '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' (4 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Prescheduled LOOP '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' (4 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(74): Prescheduled LOOP '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for' (4 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Prescheduled LOOP '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Prescheduled LOOP '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Prescheduled LOOP '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Prescheduled LOOP '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(149): Prescheduled LOOP '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(73): Prescheduled LOOP '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(116): Prescheduled LOOP '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for' (2 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Prescheduled LOOP '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Prescheduled LOOP '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Prescheduled LOOP '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Prescheduled LOOP '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(148): Prescheduled LOOP '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(72): Prescheduled LOOP '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(113): Prescheduled LOOP '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Prescheduled LOOP '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for:for' (4 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Prescheduled LOOP '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Prescheduled LOOP '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for:for' (4 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Prescheduled LOOP '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for' (4 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(144): Prescheduled LOOP '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for:for' (4 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(69): Prescheduled LOOP '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for' (5 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(112): Prescheduled LOOP '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Prescheduled LOOP '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Prescheduled LOOP '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Prescheduled LOOP '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Prescheduled LOOP '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(143): Prescheduled LOOP '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(68): Prescheduled LOOP '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(120): Prescheduled LOOP '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2' (2 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(111): Prescheduled LOOP '/cnn/core/m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Prescheduled LOOP '/cnn/core/max_pool<20,6,6,16,8,true,16,8,false>:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Prescheduled LOOP '/cnn/core/relu<720,16,8,true>:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Prescheduled LOOP '/cnn/core/convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Prescheduled LOOP '/cnn/core/max_pool<32,12,12,16,8,true,16,8,false>:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Prescheduled LOOP '/cnn/core/relu<4608,16,8,true>:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Prescheduled LOOP '/cnn/core/convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(142): Prescheduled LOOP '/cnn/core/max_pool<64,24,24,16,8,true,16,8,false>:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(17): Prescheduled LOOP '/cnn/core/relu<36864,16,8,true>:for' (3 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/utils.cpp(67): Prescheduled LOOP '/cnn/core/convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Prescheduled LOOP '/cnn/core/main' (2 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/cnn.cpp(58): Prescheduled LOOP '/cnn/core/image7:vinit' (2 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/cnn.cpp(56): Prescheduled LOOP '/cnn/core/image5:vinit' (2 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/cnn.cpp(54): Prescheduled LOOP '/cnn/core/image3:vinit' (2 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/cnn.cpp(53): Prescheduled LOOP '/cnn/core/image2:vinit' (2 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Prescheduled LOOP '/cnn/core/core:rlp' (1 c-steps) (SCHD-7)
+# $PROJECT_HOME/../../cpp/cnn.cpp(39): Prescheduled SEQUENTIAL '/cnn/core' (total length 46218075 c-steps) (SCHD-8)
+# Info: $PROJECT_HOME/../../cpp/cnn.cpp(39): Initial schedule of SEQUENTIAL '/cnn/core': Latency = 46123242, Area (Datapath, Register, Total) = 207362.20, 0.00, 207362.20 (CRAAS-11)
+# At least one feasible schedule exists. (CRAAS-9)
+# Info: $PROJECT_HOME/../../cpp/cnn.cpp(39): Final schedule of SEQUENTIAL '/cnn/core': Latency = 46123242, Area (Datapath, Register, Total) = 202042.20, 0.00, 202042.20 (CRAAS-12)
+# Resource allocation and scheduling done. (CRAAS-2)
+# Netlist written to file 'schedule.gnt' (NET-4)
+# Info: Completed transformation 'allocate' on solution 'cnn.v1': elapsed time 8.74 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'allocate': Total ops = 1645, Real ops = 380, Vars = 283 (SOL-21)
+# > go extract
+# Info: Starting transformation 'schedule' on solution 'cnn.v1' (SOL-8)
+# Performing concurrent resource allocation and scheduling on '/cnn/core' (CRAAS-1)
+# Global signal 'image:rsc.q' added to design 'cnn' for component 'image:rsci' (LIB-3)
+# Global signal 'image:rsc.re' added to design 'cnn' for component 'image:rsci' (LIB-3)
+# Global signal 'image:rsc.radr' added to design 'cnn' for component 'image:rsci' (LIB-3)
+# Info: $MGC_HOME/shared/include/ac_fixed.h(339): Creating buffer for wait controller for component 'image:rsc' (SCHD-46)
+# Global signal 'scores:rsc.dat' added to design 'cnn' for component 'scores:rsci' (LIB-3)
+# Global signal 'image2:rsc.clken' added to design 'cnn' for component 'image2:rsci' (LIB-3)
+# Global signal 'image2:rsc.q' added to design 'cnn' for component 'image2:rsci' (LIB-3)
+# Global signal 'image2:rsc.re' added to design 'cnn' for component 'image2:rsci' (LIB-3)
+# Global signal 'image2:rsc.radr' added to design 'cnn' for component 'image2:rsci' (LIB-3)
+# Global signal 'image2:rsc.we' added to design 'cnn' for component 'image2:rsci' (LIB-3)
+# Global signal 'image2:rsc.d' added to design 'cnn' for component 'image2:rsci' (LIB-3)
+# Global signal 'image2:rsc.wadr' added to design 'cnn' for component 'image2:rsci' (LIB-3)
+# Global signal 'image3:rsc.clken' added to design 'cnn' for component 'image3:rsci' (LIB-3)
+# Global signal 'image3:rsc.q' added to design 'cnn' for component 'image3:rsci' (LIB-3)
+# Global signal 'image3:rsc.re' added to design 'cnn' for component 'image3:rsci' (LIB-3)
+# Global signal 'image3:rsc.radr' added to design 'cnn' for component 'image3:rsci' (LIB-3)
+# Global signal 'image3:rsc.we' added to design 'cnn' for component 'image3:rsci' (LIB-3)
+# Global signal 'image3:rsc.d' added to design 'cnn' for component 'image3:rsci' (LIB-3)
+# Global signal 'image3:rsc.wadr' added to design 'cnn' for component 'image3:rsci' (LIB-3)
+# Global signal 'image4:rsc.clken' added to design 'cnn' for component 'image4:rsci' (LIB-3)
+# Global signal 'image4:rsc.q' added to design 'cnn' for component 'image4:rsci' (LIB-3)
+# Global signal 'image4:rsc.re' added to design 'cnn' for component 'image4:rsci' (LIB-3)
+# Global signal 'image4:rsc.radr' added to design 'cnn' for component 'image4:rsci' (LIB-3)
+# Global signal 'image4:rsc.we' added to design 'cnn' for component 'image4:rsci' (LIB-3)
+# Global signal 'image4:rsc.d' added to design 'cnn' for component 'image4:rsci' (LIB-3)
+# Global signal 'image4:rsc.wadr' added to design 'cnn' for component 'image4:rsci' (LIB-3)
+# Global signal 'image5:rsc.clken' added to design 'cnn' for component 'image5:rsci' (LIB-3)
+# Global signal 'image5:rsc.q' added to design 'cnn' for component 'image5:rsci' (LIB-3)
+# Global signal 'image5:rsc.re' added to design 'cnn' for component 'image5:rsci' (LIB-3)
+# Global signal 'image5:rsc.radr' added to design 'cnn' for component 'image5:rsci' (LIB-3)
+# Global signal 'image5:rsc.we' added to design 'cnn' for component 'image5:rsci' (LIB-3)
+# Global signal 'image5:rsc.d' added to design 'cnn' for component 'image5:rsci' (LIB-3)
+# Global signal 'image5:rsc.wadr' added to design 'cnn' for component 'image5:rsci' (LIB-3)
+# Global signal 'image6:rsc.clken' added to design 'cnn' for component 'image6:rsci' (LIB-3)
+# Global signal 'image6:rsc.q' added to design 'cnn' for component 'image6:rsci' (LIB-3)
+# Global signal 'image6:rsc.re' added to design 'cnn' for component 'image6:rsci' (LIB-3)
+# Global signal 'image6:rsc.radr' added to design 'cnn' for component 'image6:rsci' (LIB-3)
+# Global signal 'image6:rsc.we' added to design 'cnn' for component 'image6:rsci' (LIB-3)
+# Global signal 'image6:rsc.d' added to design 'cnn' for component 'image6:rsci' (LIB-3)
+# Global signal 'image6:rsc.wadr' added to design 'cnn' for component 'image6:rsci' (LIB-3)
+# Global signal 'image7:rsc.clken' added to design 'cnn' for component 'image7:rsci' (LIB-3)
+# Global signal 'image7:rsc.q' added to design 'cnn' for component 'image7:rsci' (LIB-3)
+# Global signal 'image7:rsc.re' added to design 'cnn' for component 'image7:rsci' (LIB-3)
+# Global signal 'image7:rsc.radr' added to design 'cnn' for component 'image7:rsci' (LIB-3)
+# Global signal 'image7:rsc.we' added to design 'cnn' for component 'image7:rsci' (LIB-3)
+# Global signal 'image7:rsc.d' added to design 'cnn' for component 'image7:rsci' (LIB-3)
+# Global signal 'image7:rsc.wadr' added to design 'cnn' for component 'image7:rsci' (LIB-3)
+# Global signal 'done:sync.vld' added to design 'cnn' for component 'done:synci' (LIB-3)
+# Global signal 'start:sync.vld' added to design 'cnn' for component 'start:synci' (LIB-3)
+# Global signal 'start:sync.rdy' added to design 'cnn' for component 'start:synci' (LIB-3)
+# Global signal 'image.triosy.lz' added to design 'cnn' for component 'image.triosy:obj' (LIB-3)
+# Global signal 'scores.triosy.lz' added to design 'cnn' for component 'scores.triosy:obj' (LIB-3)
+# Info: Running transformation 'schedule' on solution 'cnn.v1': elapsed time 29.14 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-15)
+# Report written to file 'cycle.rpt'
+# Info: Completed transformation 'schedule' on solution 'cnn.v1': elapsed time 33.78 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'schedule': Total ops = 7147, Real ops = 381, Vars = 587 (SOL-21)
+# Info: Starting transformation 'dpfsm' on solution 'cnn.v1' (SOL-8)
+# Performing FSM extraction... (FSM-1)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:chan(6:0).sva(5:0)' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:chan(6:0).sva(5:0), convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:chan_i(6:0).sva(5:0), max_pool<64,24,24,16,8,true,16,8,false>:for:chan(6:0).sva(5:0), max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:plane:acc.psp.sva' (3 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:chan(4:0).sva' for variables 'convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:chan(4:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:chan(4:0).sva, max_pool<20,6,6,16,8,true,16,8,false>:for:chan(4:0).sva, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:row(4:0).sva' (3 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:col(4:0).sva' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:col(4:0).sva, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:col(4:0).sva#1, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:chan_i(5:0).sva(4:0), convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:chan(5:0).sva(4:0), max_pool<32,12,12,16,8,true,16,8,false>:for:chan(5:0).sva(4:0), m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:f:acc#4.sdt(4:0), max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:plane:acc.psp.sva' (6 registers deleted). (FSM-3)
+# Creating shared register 'max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:col(1:0).sva' for variables 'max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:col(1:0).sva, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:col(1:0).sva#1, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:f:acc.psp' (2 registers deleted). (FSM-3)
+# Creating shared register 'm_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:row(1:0).sva' for variables 'm_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:row(1:0).sva, max_pool<20,6,6,16,8,true,16,8,false>:for:for:row(1:0).sva, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for:n(1:0).sva, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for:n(1:0).sva#1, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for:n(1:0).sva, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for:n(1:0).sva#1' (5 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:chan_i(1:0).sva' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:chan_i(1:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:col(1:0).sva, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:m(1:0).sva, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:m(1:0).sva, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:m(1:0).sva' (4 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:m(2:0).sva' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:m(2:0).sva, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:m(2:0).sva, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:m(2:0).sva, max_pool<32,12,12,16,8,true,16,8,false>:for:for:row(2:0).sva' (3 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva#1, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:col(2:0).sva, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:col(2:0).sva#1' (3 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva' for variables 'convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva#1, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:row(2:0).sva, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:col(2:0).sva, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:col(2:0).sva#1' (4 registers deleted). (FSM-3)
+# Creating shared register 'get_valid_pixel<24,24,16,4,true>:get_valid_pixel<24,24,16,4,true>:and.itm' for variables 'get_valid_pixel<24,24,16,4,true>:get_valid_pixel<24,24,16,4,true>:and.itm, get_valid_pixel<6,6,16,8,false>:get_valid_pixel<6,6,16,8,false>:and.itm, get_valid_pixel<12,12,16,8,false>:get_valid_pixel<12,12,16,8,false>:and.itm, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:a.sva, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:max_value.lpi#6, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:max_value.lpi#6, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:max_value.lpi#6, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:max_value.lpi#6.dfm, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:max_value.lpi#6.dfm, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:max_value.lpi#6.dfm, relu<36864,16,8,true>:for:i(15:0).sva#1' (10 registers deleted). (FSM-3)
+# Creating shared register 'image2:static_init:else:acc.itm' for variables 'image2:static_init:else:acc.itm, image2:vinit.ndx.sva, relu<36864,16,8,true>:for:i(15:0).sva, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:read_rom(ker1.rom_map_1).itm' (3 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:for:slc(max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:for:acc)(2).itm, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for:slc(max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for:acc)(2).itm, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for:slc(max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for:acc)(2).itm, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:slc(max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:acc)(2).itm' (6 registers deleted). (FSM-3)
+# Creating shared register 'image4:vinit.ndx.sva' for variables 'image4:vinit.ndx.sva, image4:vinit.ndx.sva#1, relu<4608,16,8,true>:for:i(12:0).sva' (2 registers deleted). (FSM-3)
+# Creating shared register 'image6:vinit.ndx.sva' for variables 'image6:vinit.ndx.sva, image6:vinit.ndx.sva#1, relu<720,16,8,true>:for:i(9:0).sva' (2 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:slc(convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:acc)(2).itm' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:slc(convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:acc)(2).itm, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:slc(convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:acc)(2).itm, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:slc(convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:acc)(2).itm, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:slc(m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:acc)(3).itm, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:slc(m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:acc)(3).itm, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:slc(max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:acc)(2).itm, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:slc(max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:acc)(2).itm, relu<36864,16,8,true>:for:slc(relu<36864,16,8,true>:for:acc)(4).itm, relu<4608,16,8,true>:for:slc(relu<4608,16,8,true>:for:acc)(4).itm, relu<720,16,8,true>:for:slc(relu<720,16,8,true>:for:acc)(6).itm' (9 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:col(3:0).sva' for variables 'convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:col(3:0).sva, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:col(3:0).sva#1, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:col(3:0).sva, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:col(3:0).sva#1, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:j(3:0).sva#1' (4 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:row(3:0).sva' for variables 'convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:row(3:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:j(3:0).sva, max_pool<64,24,24,16,8,true,16,8,false>:for:for:row(3:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:j(3:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:j(3:0).sva#1' (4 registers deleted). (FSM-3)
+# Creating shared register 'image3:static_init:else:acc.itm' for variables 'image3:static_init:else:acc.itm, image3:vinit.ndx.sva, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:read_rom(ker2.rom_map_1).itm' (2 registers deleted). (FSM-3)
+# Creating shared register 'exit:image4:vinit.sva' for variables 'exit:image4:vinit.sva, exit:image4:vinit.sva.dfm, image5:static_init:else:image5:static_init:else:nor.itm' (2 registers deleted). (FSM-3)
+# Creating shared register 'exit:image6:vinit.sva' for variables 'exit:image6:vinit.sva, exit:image6:vinit.sva.dfm, image3:static_init:else:image3:static_init:else:nor.itm' (2 registers deleted). (FSM-3)
+# Creating shared register 'image7:static_init:else:acc.itm' for variables 'image7:static_init:else:acc.itm, image7:vinit.ndx.sva, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:row(3:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:j(3:0).sva, max_pool<64,24,24,16,8,true,16,8,false>:for:for:row(3:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:j(3:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:j(3:0).sva#1, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:n(2:0).sva#1, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:col(2:0).sva, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:col(2:0).sva#1' (2 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:acc#9(32:0).lpi#7' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:acc#9(32:0).lpi#7, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:acc#9(28:0).lpi#7, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:acc#9(28:0).lpi#7, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:acc(0).lpi#4(30:0), m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:mux#10.itm(30:0)' (2 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:chan_i(1:0).sva' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:chan_i(1:0).sva, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:col(1:0).sva, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:m(1:0).sva, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:m(1:0).sva, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:m(1:0).sva, exit:image4:vinit.sva, exit:image4:vinit.sva.dfm, image5:static_init:else:image5:static_init:else:nor.itm, image2:static_init:else:image2:static_init:else:nor.itm, image7:static_init:else:image7:static_init:else:nor.itm' (2 registers deleted). (FSM-3)
+# Creating shared register 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm' for variables 'convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:slc(convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:acc)(3).itm, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:for:slc(max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:for:for:acc)(2).itm, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for:slc(max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:for:for:acc)(2).itm, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for:slc(max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:for:for:acc)(2).itm, max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:slc(max_pool<20,6,6,16,8,true,16,8,false>:for:for:for:acc)(2).itm, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:slc(convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:acc)(2).itm, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:slc(convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:acc)(2).itm, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:slc(convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:acc)(2).itm, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:slc(m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#1:for:for:for:acc)(3).itm, m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:slc(m_acc_hwc<20,3,3,10,0,0,16,8,false,16,1,true,16,3,true,16,8,true>:for#2:acc)(3).itm, max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:slc(max_pool<32,12,12,16,8,true,16,8,false>:for:for:for:acc)(2).itm, max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:slc(max_pool<64,24,24,16,8,true,16,8,false>:for:for:for:acc)(2).itm, relu<36864,16,8,true>:for:slc(relu<36864,16,8,true>:for:acc)(4).itm, relu<4608,16,8,true>:for:slc(relu<4608,16,8,true>:for:acc)(4).itm, relu<720,16,8,true>:for:slc(relu<720,16,8,true>:for:acc)(6).itm, exit:image6:vinit.sva, exit:image6:vinit.sva.dfm, image3:static_init:else:image3:static_init:else:nor.itm' (2 registers deleted). (FSM-3)
+# Creating shared register 'image2:static_init:else:acc.itm' for variables 'image2:static_init:else:acc.itm, image2:vinit.ndx.sva, relu<36864,16,8,true>:for:i(15:0).sva, convolution_feature<3,24,24,64,5,0,0,16,4,true,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:read_rom(ker1.rom_map_1).itm, image3:static_init:else:acc.itm, image3:vinit.ndx.sva, convolution_feature<64,12,12,32,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:read_rom(ker2.rom_map_1).itm, convolution_feature<32,6,6,20,5,0,0,16,8,false,16,3,true,16,4,true,16,8,true>:for:for:for:for:for:for:read_rom(ker3.rom_map_1).itm, relu<4608,16,8,true>:for:i(12:0).sva#1' (3 registers deleted). (FSM-3)
+# Info: Completed transformation 'dpfsm' on solution 'cnn.v1': elapsed time 8.02 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'dpfsm': Total ops = 3955, Real ops = 1733, Vars = 723 (SOL-21)
+# Info: Starting transformation 'instance' on solution 'cnn.v1' (SOL-8)
+# Netlist written to file 'schematic.nlv' (NET-4)
+# Info: Completed transformation 'instance' on solution 'cnn.v1': elapsed time 5.85 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'instance': Total ops = 4265, Real ops = 1820, Vars = 3873 (SOL-21)
+# Info: Starting transformation 'extract' on solution 'cnn.v1' (SOL-8)
+# Report written to file 'rtl.rpt'
+# ROM component 'mgc_rom(20,51200,14,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(21,4800,16,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(22,16000,15,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(23,1800,14,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(24,64,15,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(25,32,15,1)' initialization mode: inline_init. (MEM-76)
+# Generating scverify_top.cpp
+# Generating SCVerify ccs_wrapper_cnn.vhdl
+# Netlist written to file 'rtl.vhdl' (NET-4)
+# generate concat
+# order file name is: rtl.vhdl_order.txt
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_out_vld_v1.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_in_wait_v1.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/mgc_io_sync_v2.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_out_v1.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/ccs_xilinx/hdl/BLOCK_1R1W_RBW.vhd
+# Add dependent file: ./rtl_cnnmgc_rom_20_51200_14_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_21_4800_16_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_22_16000_15_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_23_1800_14_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_24_64_15_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_25_32_15_1.vhdl
+# Add dependent file: ./rtl.vhdl
+# Finished writing concatenated file: /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1/concat_rtl.vhdl
+# order file name is: rtl.vhdl_order_sim.txt
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_out_vld_v1.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_in_wait_v1.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/mgc_io_sync_v2.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_out_v1.vhd
+# Add dependent file: /softl3/catapult_2024_2/Mgc_home/pkgs/ccs_xilinx/hdl/BLOCK_1R1W_RBW.vhd
+# Add dependent file: ./rtl_cnnmgc_rom_20_51200_14_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_21_4800_16_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_22_16000_15_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_23_1800_14_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_24_64_15_1.vhdl
+# Add dependent file: ./rtl_cnnmgc_rom_25_32_15_1.vhdl
+# Add dependent file: ./rtl.vhdl
+# Finished writing concatenated simulation file: /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1/concat_sim_rtl.vhdl
+# Generating SCVerify testbench files
+# Makefile for RTL VHDL output 'rtl.vhdl' vs Untimed C++ written to file './scverify/Verify_rtl_vhdl_msim.mk'
+# Synthesis script written to file 'rtl.vhdl.psr'
+# Synthesis script written to file 'concat_rtl.vhdl.psr'
+# Makefile for Concat RTL VHDL output 'concat_sim_rtl.vhdl' vs Untimed C++ written to file './scverify/Verify_concat_sim_rtl_vhdl_msim.mk'
+# Info: Completed transformation 'extract' on solution 'cnn.v1': elapsed time 16.79 seconds, memory usage 2562804kB, peak memory usage 2584680kB (SOL-9)
+# Info: Design complexity at end of 'extract': Total ops = 4236, Real ops = 1897, Vars = 763 (SOL-21)
+# > flow run /SCVerify
+# Makefile for Original Design + Testbench written to file './scverify/Verify_orig_cxx_osci.mk'
+# ROM component 'mgc_rom(20,51200,14,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(21,4800,16,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(22,16000,15,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(23,1800,14,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(24,64,15,1)' initialization mode: inline_init. (MEM-76)
+# ROM component 'mgc_rom(25,32,15,1)' initialization mode: inline_init. (MEM-76)
+# Generating SCVerify ccs_wrapper_cnn.vhdl
+# Netlist written to file 'rtl.vhdl' (NET-4)
+# Makefile for RTL VHDL output 'rtl.vhdl' vs Untimed C++ written to file './scverify/Verify_rtl_vhdl_msim.mk'
+# Makefile for Concat RTL VHDL output 'concat_sim_rtl.vhdl' vs Untimed C++ written to file './scverify/Verify_concat_sim_rtl_vhdl_msim.mk'
+# > flow run /SCVerify/launch_make ./scverify/Verify_orig_cxx_osci.mk {} SIMTOOL=osci sim
+# Making './scverify/Verify_orig_cxx_osci.mk {} SIMTOOL=osci sim'
+# Make utility invoked from '/tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1'
+#     /softl3/catapult_2024_2/Mgc_home/bin/make -f ./scverify/Verify_orig_cxx_osci.mk SIMTOOL=osci build < "/dev/null" (BASIC-15)
+# ============================================
+# Creating simulation directory 'scverify/orig_cxx_osci'
+# mkdir -p scverify/orig_cxx_osci
+# ============================================
+# Compiling C++ file: ../../../../cpp/cnn.cpp
+# /softl3/catapult_2024_2/Mgc_home/pkgs/dcs_gcc/usr/bin/g++ -DCCS_DUT_SYSC -DKS=5 -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DCCS_MISMATCHED_OUTPUTS_ONLY -DDEADLOCK_DETECTION -std=gnu++11 -Wall -Wno-unknown-pragmas -Wno-unused-label -g -I. -I/usr/include/x86_64-linux-gnu/ -I../.. -I. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DSC_USE_STD_STRING  -c ../../../../cpp/cnn.cpp -o scverify/orig_cxx_osci/cnn.cpp.cxxts.o
+# ============================================
+# Compiling C++ file: ../../../../cpp/utils.cpp
+# /softl3/catapult_2024_2/Mgc_home/pkgs/dcs_gcc/usr/bin/g++ -DCCS_DUT_SYSC -DKS=5 -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DCCS_MISMATCHED_OUTPUTS_ONLY -DDEADLOCK_DETECTION -std=gnu++11 -Wall -Wno-unknown-pragmas -Wno-unused-label -g -I. -I/usr/include/x86_64-linux-gnu/ -I../.. -I. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DSC_USE_STD_STRING  -c ../../../../cpp/utils.cpp -o scverify/orig_cxx_osci/utils.cpp.cxxts.o
+# ============================================
+# Compiling C++ file: ../../../tb_hls.cpp
+# /softl3/catapult_2024_2/Mgc_home/pkgs/dcs_gcc/usr/bin/g++ -DCCS_DUT_SYSC -DKS=5 -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DCCS_MISMATCHED_OUTPUTS_ONLY -DDEADLOCK_DETECTION -std=gnu++11 -Wall -Wno-unknown-pragmas -Wno-unused-label -g -I. -I/usr/include/x86_64-linux-gnu/ -I../.. -I. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DSC_USE_STD_STRING  -c ../../../tb_hls.cpp -o scverify/orig_cxx_osci/tb_hls.cpp.cxxts.o
+# ============================================
+# Compiling C++ file: ../../../../cpp/read_image.cpp
+# /softl3/catapult_2024_2/Mgc_home/pkgs/dcs_gcc/usr/bin/g++ -DCCS_DUT_SYSC -DKS=5 -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DCCS_MISMATCHED_OUTPUTS_ONLY -DDEADLOCK_DETECTION -std=gnu++11 -Wall -Wno-unknown-pragmas -Wno-unused-label -g -I. -I/usr/include/x86_64-linux-gnu/ -I../.. -I. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DSC_USE_STD_STRING  -c ../../../../cpp/read_image.cpp -o scverify/orig_cxx_osci/read_image.cpp.cxxts.o
+# ============================================
+# Linking executable
+# /softl3/catapult_2024_2/Mgc_home/pkgs/dcs_gcc/usr/bin/g++  -B/usr/lib/x86_64-linux-gnu -static-libstdc++ -L/softl3/catapult_2024_2/Mgc_home/shared/lib/Linux/gcc-10.3.0-64 -L/softl3/catapult_2024_2/Mgc_home/shared/lib -L/softl3/catapult_2024_2/Mgc_home/shared/lib/Linux/gcc-10.3.0-64 scverify/orig_cxx_osci/cnn.cpp.cxxts.o scverify/orig_cxx_osci/utils.cpp.cxxts.o scverify/orig_cxx_osci/tb_hls.cpp.cxxts.o scverify/orig_cxx_osci/read_image.cpp.cxxts.o -Wl,-Bstatic -lsystemc -Wl,-Bdynamic -lpthread -o scverify/orig_cxx_osci/scverify_top
+#     /softl3/catapult_2024_2/Mgc_home/bin/make -f ./scverify/Verify_orig_cxx_osci.mk SIMTOOL=osci sim (BASIC-14)
+# ============================================
+# Simulating design
+# cd ../..; ./Catapult_1/cnn.v1/scverify/orig_cxx_osci/scverify_top 
+# === TESTBENCH HLS cnn() ===
+# Noyau 5x5, 2 image(s) de /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/data/cifar-10-batches-bin/data_batch_1.bin
+# Comparaison exacte à /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/ref/scores_k5.txt
+# Erreur : load_image : impossible d'ouvrir /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/data/cifar-10-batches-bin/data_batch_1.bin
+# Error: make: *** [sim] Error 1
+# > flow run /SCVerify/launch_make ./scverify/Verify_rtl_vhdl_msim.mk {} SIMTOOL=msim build
+# Making './scverify/Verify_rtl_vhdl_msim.mk {} SIMTOOL=msim build'
+# Make utility invoked from '/tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1'
+#     /softl3/catapult_2024_2/Mgc_home/bin/make -f ./scverify/Verify_rtl_vhdl_msim.mk SIMTOOL=msim build < "/dev/null" (BASIC-15)
+# /softl3/catapult_2024_2/Mgc_home/shared/include/mkfiles/ccs_questasim.mk:209: Warning: Using QuestaSim on Ubuntu requires -B/usr/bin link argument
+# ============================================
+# Creating simulation directory 'scverify/rtl_vhdl_msim'
+# mkdir -p scverify/rtl_vhdl_msim
+# ============================================
+# Setting up default modelsim.ini file from '/softslin/questa_core_prime_2024_2_2/questasim/bin/../modelsim.ini'
+# cat "/softslin/questa_core_prime_2024_2_2/questasim/bin/../modelsim.ini" >scverify/rtl_vhdl_msim/modelsim.ini
+# ============================================
+# Creating physical library 'scverify/rtl_vhdl_msim/mgc_hls'
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vlib scverify/rtl_vhdl_msim/mgc_hls
+# ============================================
+# Mapping logical library 'mgc_hls' to physical path '$SCVLIBS/scverify/rtl_vhdl_msim/mgc_hls'
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vmap mgc_hls \$SCVLIBS/scverify/rtl_vhdl_msim/mgc_hls
+# QuestaSim-64 vmap 2024.2_2 Lib Mapping Utility 2024.08 Aug  9 2024
+# vmap mgc_hls $SCVLIBS/scverify/rtl_vhdl_msim/mgc_hls 
+# Modifying scverify/rtl_vhdl_msim/modelsim.ini
+# ============================================
+# Creating physical library 'scverify/rtl_vhdl_msim/work'
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vlib scverify/rtl_vhdl_msim/work
+# ============================================
+# Mapping logical library 'work' to physical path '$SCVLIBS/scverify/rtl_vhdl_msim/work'
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vmap work \$SCVLIBS/scverify/rtl_vhdl_msim/work
+# QuestaSim-64 vmap 2024.2_2 Lib Mapping Utility 2024.08 Aug  9 2024
+# vmap work $SCVLIBS/scverify/rtl_vhdl_msim/work 
+# Modifying scverify/rtl_vhdl_msim/modelsim.ini
+# ============================================
+# Creating Questa SIM wave TCL file 'scverify/rtl_vhdl_msim/scverify_msim_wave.tcl' from 'scverify/ccs_wave_signals.dat'
+# /softl3/catapult_2024_2/Mgc_home/bin/tclsh8.5 /softl3/catapult_2024_2/Mgc_home/pkgs/sif/userware/En_na/flows/app_questasim.flo create_wave_script ./Catapult_1/cnn.v1/scverify/ccs_wave_signals.dat scverify/rtl_vhdl_msim/scverify_msim_wave.tcl ./Catapult_1/cnn.v1/.dut_inst_info.tcl ./Catapult_1/cnn.v1/.qwave_signal 
+# app_questasim.flo - Executing command 'create_wave_script ./Catapult_1/cnn.v1/scverify/ccs_wave_signals.dat scverify/rtl_vhdl_msim/scverify_msim_wave.tcl ./Catapult_1/cnn.v1/.dut_inst_info.tcl ./Catapult_1/cnn.v1/.qwave_signal'...
+# Wrote Questa SIM waveform creation script to 'scverify/rtl_vhdl_msim/scverify_msim_wave.tcl'
+# ============================================
+# Compiling VHDL file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_out_vld_v1.vhd
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_out_vld_v1.vhd
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:48 on Nov 24,2026
+# vcom -work mgc_hls /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_out_vld_v1.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Compiling package ccs_sync_out_vld_pkg_v1
+# -- Compiling entity ccs_sync_out_vld_v1
+# -- Compiling architecture beh of ccs_sync_out_vld_v1
+# End time: 17:19:50 on Nov 24,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_in_wait_v1.vhd
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_in_wait_v1.vhd
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:50 on Nov 24,2026
+# vcom -work mgc_hls /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_sync_in_wait_v1.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Compiling package ccs_sync_in_wait_pkg_v1
+# -- Compiling entity ccs_sync_in_wait_v1
+# -- Compiling architecture beh of ccs_sync_in_wait_v1
+# End time: 17:19:50 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/mgc_io_sync_v2.vhd
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/mgc_io_sync_v2.vhd
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:50 on Nov 24,2026
+# vcom -work mgc_hls /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/mgc_io_sync_v2.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Compiling package mgc_io_sync_pkg_v2
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Compiling entity mgc_io_sync_v2
+# -- Compiling architecture beh of mgc_io_sync_v2
+# End time: 17:19:50 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_out_v1.vhd
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_out_v1.vhd
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:50 on Nov 24,2026
+# vcom -work mgc_hls /softl3/catapult_2024_2/Mgc_home/pkgs/siflibs/ccs_out_v1.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Compiling package ccs_out_pkg_v1
+# -- Compiling entity ccs_out_v1
+# -- Compiling architecture beh of ccs_out_v1
+# End time: 17:19:50 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: /softl3/catapult_2024_2/Mgc_home/pkgs/ccs_xilinx/hdl/BLOCK_1R1W_RBW.vhd
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   /softl3/catapult_2024_2/Mgc_home/pkgs/ccs_xilinx/hdl/BLOCK_1R1W_RBW.vhd
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:50 on Nov 24,2026
+# vcom -work mgc_hls /softl3/catapult_2024_2/Mgc_home/pkgs/ccs_xilinx/hdl/BLOCK_1R1W_RBW.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling package BLOCK_1R1W_RBW_pkg
+# -- Compiling entity BLOCK_1R1W_RBW
+# -- Compiling architecture rtl of BLOCK_1R1W_RBW
+# End time: 17:19:51 on Nov 24,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: rtl_cnnmgc_rom_20_51200_14_1.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   rtl_cnnmgc_rom_20_51200_14_1.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:51 on Nov 24,2026
+# vcom -work mgc_hls rtl_cnnmgc_rom_20_51200_14_1.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Compiling package cnnmgc_rom_20_51200_14_1_pkg
+# -- Compiling package body cnnmgc_rom_20_51200_14_1_pkg
+# -- Loading package cnnmgc_rom_20_51200_14_1_pkg
+# -- Loading package cnnmgc_rom_20_51200_14_1_pkg
+# -- Loading package std_logic_textio
+# -- Compiling entity cnnmgc_rom_20_51200_14_1
+# -- Compiling architecture v1 of cnnmgc_rom_20_51200_14_1
+# End time: 17:19:51 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: rtl_cnnmgc_rom_21_4800_16_1.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   rtl_cnnmgc_rom_21_4800_16_1.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:51 on Nov 24,2026
+# vcom -work mgc_hls rtl_cnnmgc_rom_21_4800_16_1.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Compiling package cnnmgc_rom_21_4800_16_1_pkg
+# -- Compiling package body cnnmgc_rom_21_4800_16_1_pkg
+# -- Loading package cnnmgc_rom_21_4800_16_1_pkg
+# -- Loading package cnnmgc_rom_21_4800_16_1_pkg
+# -- Loading package std_logic_textio
+# -- Compiling entity cnnmgc_rom_21_4800_16_1
+# -- Compiling architecture v1 of cnnmgc_rom_21_4800_16_1
+# End time: 17:19:51 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: rtl_cnnmgc_rom_22_16000_15_1.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   rtl_cnnmgc_rom_22_16000_15_1.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:51 on Nov 24,2026
+# vcom -work mgc_hls rtl_cnnmgc_rom_22_16000_15_1.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Compiling package cnnmgc_rom_22_16000_15_1_pkg
+# -- Compiling package body cnnmgc_rom_22_16000_15_1_pkg
+# -- Loading package cnnmgc_rom_22_16000_15_1_pkg
+# -- Loading package cnnmgc_rom_22_16000_15_1_pkg
+# -- Loading package std_logic_textio
+# -- Compiling entity cnnmgc_rom_22_16000_15_1
+# -- Compiling architecture v1 of cnnmgc_rom_22_16000_15_1
+# End time: 17:19:52 on Nov 24,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: rtl_cnnmgc_rom_23_1800_14_1.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   rtl_cnnmgc_rom_23_1800_14_1.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:52 on Nov 24,2026
+# vcom -work mgc_hls rtl_cnnmgc_rom_23_1800_14_1.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Compiling package cnnmgc_rom_23_1800_14_1_pkg
+# -- Compiling package body cnnmgc_rom_23_1800_14_1_pkg
+# -- Loading package cnnmgc_rom_23_1800_14_1_pkg
+# -- Loading package cnnmgc_rom_23_1800_14_1_pkg
+# -- Loading package std_logic_textio
+# -- Compiling entity cnnmgc_rom_23_1800_14_1
+# -- Compiling architecture v1 of cnnmgc_rom_23_1800_14_1
+# End time: 17:19:52 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: rtl_cnnmgc_rom_24_64_15_1.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   rtl_cnnmgc_rom_24_64_15_1.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:52 on Nov 24,2026
+# vcom -work mgc_hls rtl_cnnmgc_rom_24_64_15_1.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Compiling package cnnmgc_rom_24_64_15_1_pkg
+# -- Compiling package body cnnmgc_rom_24_64_15_1_pkg
+# -- Loading package cnnmgc_rom_24_64_15_1_pkg
+# -- Loading package cnnmgc_rom_24_64_15_1_pkg
+# -- Loading package std_logic_textio
+# -- Compiling entity cnnmgc_rom_24_64_15_1
+# -- Compiling architecture v1 of cnnmgc_rom_24_64_15_1
+# End time: 17:19:52 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: rtl_cnnmgc_rom_25_32_15_1.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work mgc_hls   rtl_cnnmgc_rom_25_32_15_1.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:52 on Nov 24,2026
+# vcom -work mgc_hls rtl_cnnmgc_rom_25_32_15_1.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Compiling package cnnmgc_rom_25_32_15_1_pkg
+# -- Compiling package body cnnmgc_rom_25_32_15_1_pkg
+# -- Loading package cnnmgc_rom_25_32_15_1_pkg
+# -- Loading package cnnmgc_rom_25_32_15_1_pkg
+# -- Loading package std_logic_textio
+# -- Compiling entity cnnmgc_rom_25_32_15_1
+# -- Compiling architecture v1 of cnnmgc_rom_25_32_15_1
+# End time: 17:19:52 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: rtl.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work work   rtl.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:52 on Nov 24,2026
+# vcom -work work rtl.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package ccs_sync_out_vld_pkg_v1
+# -- Loading package ccs_sync_in_wait_pkg_v1
+# -- Loading package mgc_io_sync_pkg_v2
+# -- Loading package ccs_out_pkg_v1
+# -- Loading package NUMERIC_STD
+# -- Loading package BLOCK_1R1W_RBW_pkg
+# -- Compiling entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_9_8_16_180_1_180_16_1_gen
+# -- Compiling architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_9_8_16_180_1_180_16_1_gen
+# -- Compiling entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_8_10_16_720_1_720_16_1_gen
+# -- Compiling architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_8_10_16_720_1_720_16_1_gen
+# -- Compiling entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_7_11_16_1152_1_1152_16_1_gen
+# -- Compiling architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_7_11_16_1152_1_1152_16_1_gen
+# -- Compiling entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_6_13_16_4608_1_4608_16_1_gen
+# -- Compiling architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_6_13_16_4608_1_4608_16_1_gen
+# -- Compiling entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_5_14_16_9216_1_9216_16_1_gen
+# -- Compiling architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_5_14_16_9216_1_9216_16_1_gen
+# -- Compiling entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_4_16_16_36864_1_36864_16_1_gen
+# -- Compiling architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_4_16_16_36864_1_36864_16_1_gen
+# -- Compiling entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rport_1_11_16_1728_1_1728_16_1_gen
+# -- Compiling architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rport_1_11_16_1728_1_1728_16_1_gen
+# -- Compiling entity cnn_core_core_fsm
+# -- Compiling architecture v1 of cnn_core_core_fsm
+# -- Compiling entity cnn_core_staller
+# -- Compiling architecture v1 of cnn_core_staller
+# -- Compiling entity cnn_core_scores_triosy_obj_scores_triosy_wait_ctrl
+# -- Compiling architecture v1 of cnn_core_scores_triosy_obj_scores_triosy_wait_ctrl
+# -- Compiling entity cnn_core_image_triosy_obj_image_triosy_wait_ctrl
+# -- Compiling architecture v1 of cnn_core_image_triosy_obj_image_triosy_wait_ctrl
+# -- Compiling entity cnn_core_start_synci_start_wait_ctrl
+# -- Compiling architecture v1 of cnn_core_start_synci_start_wait_ctrl
+# -- Compiling entity cnn_core_done_synci_done_wait_ctrl
+# -- Compiling architecture v1 of cnn_core_done_synci_done_wait_ctrl
+# -- Compiling entity cnn_core_image_rsci_1_image_rsc_wait_dp
+# -- Compiling architecture v1 of cnn_core_image_rsci_1_image_rsc_wait_dp
+# -- Compiling entity cnn_core_image_rsci_1_image_rsc_wait_ctrl
+# -- Compiling architecture v1 of cnn_core_image_rsci_1_image_rsc_wait_ctrl
+# -- Compiling entity cnn_core_scores_triosy_obj
+# -- Compiling architecture v1 of cnn_core_scores_triosy_obj
+# -- Compiling entity cnn_core_image_triosy_obj
+# -- Compiling architecture v1 of cnn_core_image_triosy_obj
+# -- Compiling entity cnn_core_start_synci
+# -- Compiling architecture v1 of cnn_core_start_synci
+# -- Compiling entity cnn_core_done_synci
+# -- Compiling architecture v1 of cnn_core_done_synci
+# -- Compiling entity cnn_core_image_rsci_1
+# -- Compiling architecture v1 of cnn_core_image_rsci_1
+# -- Compiling entity cnn_core
+# -- Compiling architecture v1 of cnn_core
+# -- Loading package cnnmgc_rom_20_51200_14_1_pkg
+# -- Loading package cnnmgc_rom_21_4800_16_1_pkg
+# -- Loading package cnnmgc_rom_22_16000_15_1_pkg
+# -- Loading package cnnmgc_rom_23_1800_14_1_pkg
+# -- Loading package cnnmgc_rom_24_64_15_1_pkg
+# -- Loading package cnnmgc_rom_25_32_15_1_pkg
+# -- Compiling entity cnn
+# -- Compiling architecture v1 of cnn
+# End time: 17:19:53 on Nov 24,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling VHDL file: scverify/ccs_wrapper_cnn.vhdl
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/vcom -work work   scverify/ccs_wrapper_cnn.vhdl
+# QuestaSim-64 vcom 2024.2_2 Compiler 2024.08 Aug  9 2024
+# Start time: 17:19:53 on Nov 24,2026
+# vcom -work work scverify/ccs_wrapper_cnn.vhdl 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Compiling entity ccs_wrapper
+# -- Compiling architecture wrap of ccs_wrapper
+# End time: 17:19:53 on Nov 24,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling C++ file: ../../../../cpp/cnn.cpp
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/sccom -g -x c++ -Wall -Wno-unused-label -Wno-unknown-pragmas -scpoptions "--c++11" -DCCS_DUT_RTL -DCCS_DUT_VHDL -DKS=5 -DCCS_SCVERIFY -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DTOP_HDL_ENTITY=cnn -DCCS_DESIGN_FUNC_cnn -DCCS_DESIGN_TOP_cnn -DCCS_MISMATCHED_OUTPUTS_ONLY  -DDEADLOCK_DETECTION -std=gnu++11 -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DUSE_STD_STRING -DSC_INCLUDE_MTI_AC  -c ../../../../cpp/cnn.cpp
+# Start time: 17:19:53 on Nov 24,2026
+# 
+# QuestaSim-64 sccom 2024.2_2 compiler 2024.08 Aug  9 2024
+# End time: 17:19:59 on Nov 24,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling C++ file: ../../../../cpp/utils.cpp
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/sccom -g -x c++ -Wall -Wno-unused-label -Wno-unknown-pragmas -scpoptions "--c++11" -DCCS_DUT_RTL -DCCS_DUT_VHDL -DKS=5 -DCCS_SCVERIFY -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DTOP_HDL_ENTITY=cnn -DCCS_DESIGN_FUNC_cnn -DCCS_DESIGN_TOP_cnn -DCCS_MISMATCHED_OUTPUTS_ONLY  -DDEADLOCK_DETECTION -std=gnu++11 -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DUSE_STD_STRING -DSC_INCLUDE_MTI_AC  -c ../../../../cpp/utils.cpp
+# Start time: 17:19:59 on Nov 24,2026
+# 
+# QuestaSim-64 sccom 2024.2_2 compiler 2024.08 Aug  9 2024
+# End time: 17:20:00 on Nov 24,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling C++ file: ../../../tb_hls.cpp
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/sccom -g -x c++ -Wall -Wno-unused-label -Wno-unknown-pragmas -scpoptions "--c++11" -DCCS_DUT_RTL -DCCS_DUT_VHDL -DKS=5 -DCCS_SCVERIFY -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DTOP_HDL_ENTITY=cnn -DCCS_DESIGN_FUNC_cnn -DCCS_DESIGN_TOP_cnn -DCCS_MISMATCHED_OUTPUTS_ONLY  -DDEADLOCK_DETECTION -std=gnu++11 -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DUSE_STD_STRING -DSC_INCLUDE_MTI_AC  -c ../../../tb_hls.cpp
+# Start time: 17:20:00 on Nov 24,2026
+# 
+# QuestaSim-64 sccom 2024.2_2 compiler 2024.08 Aug  9 2024
+# End time: 17:20:04 on Nov 24,2026, Elapsed time: 0:00:04
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling C++ file: ../../../../cpp/read_image.cpp
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/sccom -g -x c++ -Wall -Wno-unused-label -Wno-unknown-pragmas -scpoptions "--c++11" -DCCS_DUT_RTL -DCCS_DUT_VHDL -DKS=5 -DCCS_SCVERIFY -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DTOP_HDL_ENTITY=cnn -DCCS_DESIGN_FUNC_cnn -DCCS_DESIGN_TOP_cnn -DCCS_MISMATCHED_OUTPUTS_ONLY  -DDEADLOCK_DETECTION -std=gnu++11 -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DUSE_STD_STRING -DSC_INCLUDE_MTI_AC  -c ../../../../cpp/read_image.cpp
+# Start time: 17:20:04 on Nov 24,2026
+# 
+# QuestaSim-64 sccom 2024.2_2 compiler 2024.08 Aug  9 2024
+# End time: 17:20:05 on Nov 24,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling C++ file: scverify/mc_testbench.cpp
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/sccom -g -x c++ -Wall -Wno-unused-label -Wno-unknown-pragmas -scpoptions "--c++11" -DCCS_DUT_RTL -DCCS_DUT_VHDL -DKS=5 -DCCS_SCVERIFY -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DTOP_HDL_ENTITY=cnn -DCCS_DESIGN_FUNC_cnn -DCCS_DESIGN_TOP_cnn -DCCS_MISMATCHED_OUTPUTS_ONLY  -DDEADLOCK_DETECTION -std=gnu++11 -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DUSE_STD_STRING -DSC_INCLUDE_MTI_AC  -c scverify/mc_testbench.cpp
+# Start time: 17:20:05 on Nov 24,2026
+# 
+# QuestaSim-64 sccom 2024.2_2 compiler 2024.08 Aug  9 2024
+# End time: 17:20:07 on Nov 24,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 0
+# ============================================
+# Compiling C++ file: scverify/scverify_top.cpp
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/sccom -g -x c++ -Wall -Wno-unused-label -Wno-unknown-pragmas -scpoptions "--c++11" -DCCS_DUT_RTL -DCCS_DUT_VHDL -DKS=5 -DCCS_SCVERIFY -DSC_INCLUDE_DYNAMIC_PROCESSES -DSC_USE_STD_STRING -DTOP_HDL_ENTITY=cnn -DCCS_DESIGN_FUNC_cnn -DCCS_DESIGN_TOP_cnn -DCCS_MISMATCHED_OUTPUTS_ONLY  -DDEADLOCK_DETECTION -std=gnu++11 -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I./scverify -I. -I../.. -I/usr/include/x86_64-linux-gnu/ -I/softl3/catapult_2024_2/Mgc_home/shared/include -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/src -I/softl3/catapult_2024_2/Mgc_home/pkgs/siflibs -I/softl3/catapult_2024_2/Mgc_home/pkgs/hls_pkgs/mgc_comps_src -DUSE_STD_STRING -DSC_INCLUDE_MTI_AC  -c scverify/scverify_top.cpp
+# Start time: 17:20:07 on Nov 24,2026
+# 
+# QuestaSim-64 sccom 2024.2_2 compiler 2024.08 Aug  9 2024
+# 
+# Exported modules:
+# 	scverify_top
+# ** Warning: (sccom-6102) The object "_data" is not debuggable. (/softl3/catapult_2024_2/Mgc_home/shared/include/mc_monitor.h, 144)
+# End time: 17:20:12 on Nov 24,2026, Elapsed time: 0:00:05
+# Errors: 0, Warnings: 1
+# ============================================
+# Linking executable
+# /softslin/questa_core_prime_2024_2_2/questasim/bin/sccom -link -B/usr/bin  
+# sccom -link -B/usr/bin 
+# Start time: 17:20:12 on Nov 24,2026
+# 
+# QuestaSim-64 sccom 2024.2_2 compiler 2024.08 Aug  9 2024
+# End time: 17:20:15 on Nov 24,2026, Elapsed time: 0:00:03
+# Errors: 0, Warnings: 0
+# ============================================
+# Optimizing design: scverify_top
+# cd ../..; /softslin/questa_core_prime_2024_2_2/questasim/bin/vopt +acc=anpr    -L "./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls" -L "./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work"   scverify_top  -o scverify_top_opt
+# QuestaSim-64 vopt 2024.2_2 Compiler 2024.08 Aug  9 2024
+# ** Warning: (vopt-10587) Some optimizations are turned off because the +acc switch is in effect. This will cause your simulation to run slowly. Please use -access/-debug to maintain needed visibility. The +acc switch would be deprecated in a future release.
+# Start time: 17:20:18 on Nov 24,2026
+# vopt "+acc=anpr" -L ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls -L ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work scverify_top -o scverify_top_opt 
+# 
+# Top level modules:
+# 	scverify_top
+# 
+# Analyzing design...
+# -- Loading shared library /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work/_sc/linux_x86_64_gcc-10.3.0/systemc.so
+# -- Loading systemc module /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work.scverify_top
+# Info: CCS_CLK_CTOR: Clock 'clk' - Using default clock period '10 ns'
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading entity ccs_wrapper
+# -- Loading architecture wrap of ccs_wrapper
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package ccs_sync_out_vld_pkg_v1
+# -- Loading package ccs_sync_in_wait_pkg_v1
+# -- Loading package mgc_io_sync_pkg_v2
+# -- Loading package ccs_out_pkg_v1
+# -- Loading package NUMERIC_STD
+# -- Loading package BLOCK_1R1W_RBW_pkg
+# -- Loading entity cnn
+# -- Loading architecture v1 of cnn
+# -- Loading entity BLOCK_1R1W_RBW
+# -- Loading entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rport_1_11_16_1728_1_1728_16_1_gen
+# -- Loading entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_4_16_16_36864_1_36864_16_1_gen
+# -- Loading entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_5_14_16_9216_1_9216_16_1_gen
+# -- Loading entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_6_13_16_4608_1_4608_16_1_gen
+# -- Loading entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_7_11_16_1152_1_1152_16_1_gen
+# -- Loading entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_8_10_16_720_1_720_16_1_gen
+# -- Loading entity cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_9_8_16_180_1_180_16_1_gen
+# -- Loading entity cnn_core
+# -- Loading architecture rtl of BLOCK_1R1W_RBW
+# -- Loading architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rport_1_11_16_1728_1_1728_16_1_gen
+# -- Loading architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_4_16_16_36864_1_36864_16_1_gen
+# -- Loading architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_5_14_16_9216_1_9216_16_1_gen
+# -- Loading architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_6_13_16_4608_1_4608_16_1_gen
+# -- Loading architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_7_11_16_1152_1_1152_16_1_gen
+# -- Loading architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_8_10_16_720_1_720_16_1_gen
+# -- Loading architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_9_8_16_180_1_180_16_1_gen
+# -- Loading architecture v1 of cnn_core
+# -- Loading entity ccs_out_v1
+# -- Loading package cnnmgc_rom_20_51200_14_1_pkg
+# -- Loading package std_logic_textio
+# -- Loading entity cnnmgc_rom_20_51200_14_1
+# -- Loading package cnnmgc_rom_21_4800_16_1_pkg
+# -- Loading entity cnnmgc_rom_21_4800_16_1
+# -- Loading package cnnmgc_rom_22_16000_15_1_pkg
+# -- Loading entity cnnmgc_rom_22_16000_15_1
+# -- Loading package cnnmgc_rom_23_1800_14_1_pkg
+# -- Loading entity cnnmgc_rom_23_1800_14_1
+# -- Loading package cnnmgc_rom_24_64_15_1_pkg
+# -- Loading entity cnnmgc_rom_24_64_15_1
+# -- Loading package cnnmgc_rom_25_32_15_1_pkg
+# -- Loading entity cnnmgc_rom_25_32_15_1
+# -- Loading entity cnn_core_image_rsci_1
+# -- Loading entity cnn_core_done_synci
+# -- Loading entity cnn_core_start_synci
+# -- Loading entity cnn_core_image_triosy_obj
+# -- Loading entity cnn_core_scores_triosy_obj
+# -- Loading entity cnn_core_staller
+# -- Loading entity cnn_core_core_fsm
+# -- Loading package body cnnmgc_rom_20_51200_14_1_pkg
+# -- Loading package body cnnmgc_rom_21_4800_16_1_pkg
+# -- Loading package body cnnmgc_rom_22_16000_15_1_pkg
+# -- Loading package body cnnmgc_rom_23_1800_14_1_pkg
+# -- Loading package body cnnmgc_rom_24_64_15_1_pkg
+# -- Loading package body cnnmgc_rom_25_32_15_1_pkg
+# -- Loading architecture beh of ccs_out_v1
+# -- Loading architecture v1 of cnnmgc_rom_20_51200_14_1
+# -- Loading architecture v1 of cnnmgc_rom_21_4800_16_1
+# -- Loading architecture v1 of cnnmgc_rom_22_16000_15_1
+# -- Loading architecture v1 of cnnmgc_rom_23_1800_14_1
+# -- Loading architecture v1 of cnnmgc_rom_24_64_15_1
+# -- Loading architecture v1 of cnnmgc_rom_25_32_15_1
+# -- Loading architecture v1 of cnn_core_image_rsci_1
+# -- Loading entity cnn_core_image_rsci_1_image_rsc_wait_ctrl
+# -- Loading entity cnn_core_image_rsci_1_image_rsc_wait_dp
+# -- Loading architecture v1 of cnn_core_image_rsci_1_image_rsc_wait_ctrl
+# -- Loading architecture v1 of cnn_core_image_rsci_1_image_rsc_wait_dp
+# -- Loading architecture v1 of cnn_core_done_synci
+# -- Loading entity ccs_sync_out_vld_v1
+# -- Loading entity cnn_core_done_synci_done_wait_ctrl
+# -- Loading architecture beh of ccs_sync_out_vld_v1
+# -- Loading architecture v1 of cnn_core_done_synci_done_wait_ctrl
+# -- Loading architecture v1 of cnn_core_start_synci
+# -- Loading entity ccs_sync_in_wait_v1
+# -- Loading entity cnn_core_start_synci_start_wait_ctrl
+# -- Loading architecture beh of ccs_sync_in_wait_v1
+# -- Loading architecture v1 of cnn_core_start_synci_start_wait_ctrl
+# -- Loading architecture v1 of cnn_core_image_triosy_obj
+# -- Loading entity mgc_io_sync_v2
+# -- Loading entity cnn_core_image_triosy_obj_image_triosy_wait_ctrl
+# -- Loading architecture beh of mgc_io_sync_v2
+# -- Loading architecture v1 of cnn_core_image_triosy_obj_image_triosy_wait_ctrl
+# -- Loading architecture v1 of cnn_core_scores_triosy_obj
+# -- Loading entity cnn_core_scores_triosy_obj_scores_triosy_wait_ctrl
+# -- Loading architecture v1 of cnn_core_scores_triosy_obj_scores_triosy_wait_ctrl
+# -- Loading architecture v1 of cnn_core_staller
+# -- Loading architecture v1 of cnn_core_core_fsm
+# Optimizing 56 design-units (inlining 0/40 architecture instances, 0/13 systemc instances):
+# -- Optimizing architecture v1 of cnnmgc_rom_24_64_15_1
+# -- Optimizing architecture v1 of cnnmgc_rom_25_32_15_1
+# -- Optimizing architecture v1 of cnn_core_image_rsci_1
+# -- Optimizing architecture wrap of ccs_wrapper
+# -- Optimizing architecture v1 of cnn_core_image_rsci_1_image_rsc_wait_dp
+# -- Optimizing architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_9_8_16_180_1_180_16_1_gen
+# -- Optimizing architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_8_10_16_720_1_720_16_1_gen
+# -- Optimizing architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_7_11_16_1152_1_1152_16_1_gen
+# -- Optimizing architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_6_13_16_4608_1_4608_16_1_gen
+# -- Optimizing architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_5_14_16_9216_1_9216_16_1_gen
+# -- Optimizing architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rwport_en_4_16_16_36864_1_36864_16_1_gen
+# -- Optimizing architecture v1 of cnn_core_start_synci
+# -- Optimizing architecture v1 of cnn_core_scores_triosy_obj
+# -- Optimizing architecture v1 of cnn_core_image_triosy_obj
+# -- Optimizing architecture v1 of cnn_core_done_synci
+# -- Optimizing package BLOCK_1R1W_RBW_pkg
+# -- Optimizing architecture v1 of cnn_Xilinx_RAMS_BLOCK_1R1W_RBW_rport_1_11_16_1728_1_1728_16_1_gen
+# -- Optimizing architecture v1 of cnn_core_staller
+# -- Optimizing architecture v1 of cnn_core_image_rsci_1_image_rsc_wait_ctrl
+# -- Optimizing architecture beh of ccs_out_v1
+# -- Optimizing package ccs_out_pkg_v1
+# -- Optimizing architecture v1 of cnn_core_scores_triosy_obj_scores_triosy_wait_ctrl
+# -- Optimizing architecture v1 of cnn_core_image_triosy_obj_image_triosy_wait_ctrl
+# -- Optimizing architecture v1 of cnn_core_done_synci_done_wait_ctrl
+# -- Optimizing architecture v1 of cnn_core_start_synci_start_wait_ctrl
+# -- Optimizing architecture beh of ccs_sync_in_wait_v1
+# -- Optimizing package cnnmgc_rom_20_51200_14_1_pkg
+# -- Optimizing package cnnmgc_rom_25_32_15_1_pkg
+# -- Optimizing package cnnmgc_rom_23_1800_14_1_pkg
+# -- Optimizing package cnnmgc_rom_22_16000_15_1_pkg
+# -- Optimizing package cnnmgc_rom_21_4800_16_1_pkg
+# -- Optimizing package cnnmgc_rom_24_64_15_1_pkg
+# -- Optimizing package body cnnmgc_rom_20_51200_14_1_pkg
+# -- Optimizing package body cnnmgc_rom_25_32_15_1_pkg
+# -- Optimizing package body cnnmgc_rom_23_1800_14_1_pkg
+# -- Optimizing package body cnnmgc_rom_22_16000_15_1_pkg
+# -- Optimizing package body cnnmgc_rom_21_4800_16_1_pkg
+# -- Optimizing package body cnnmgc_rom_24_64_15_1_pkg
+# -- Optimizing architecture beh of mgc_io_sync_v2
+# -- Optimizing package mgc_io_sync_pkg_v2
+# -- Optimizing package ccs_sync_in_wait_pkg_v1
+# -- Optimizing architecture beh of ccs_sync_out_vld_v1
+# -- Optimizing package ccs_sync_out_vld_pkg_v1
+# -- Optimizing architecture v1 of cnnmgc_rom_20_51200_14_1
+# -- Optimizing architecture v1 of cnnmgc_rom_22_16000_15_1
+# -- Optimizing architecture v1 of cnn_core
+# -- Optimizing architecture v1 of cnnmgc_rom_21_4800_16_1
+# -- Optimizing architecture v1 of cnnmgc_rom_23_1800_14_1
+# -- Optimizing architecture v1 of cnn
+# -- Optimizing architecture v1 of cnn_core_core_fsm
+# -- Optimizing architecture rtl of BLOCK_1R1W_RBW
+# -- Optimizing architecture rtl of BLOCK_1R1W_RBW
+# -- Optimizing architecture rtl of BLOCK_1R1W_RBW
+# -- Optimizing architecture rtl of BLOCK_1R1W_RBW
+# -- Optimizing architecture rtl of BLOCK_1R1W_RBW
+# -- Optimizing architecture rtl of BLOCK_1R1W_RBW
+# Optimized design name is scverify_top_opt
+# End time: 17:20:34 on Nov 24,2026, Elapsed time: 0:00:16
+# Errors: 0, Warnings: 1, Suppressed Warnings: 1
+# > flow run /SCVerify/launch_make ./scverify/Verify_rtl_vhdl_msim.mk {} SIMTOOL=msim sim
+# Making './scverify/Verify_rtl_vhdl_msim.mk {} SIMTOOL=msim sim'
+# Make utility invoked from '/tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1'
+#     /softl3/catapult_2024_2/Mgc_home/bin/make -f ./scverify/Verify_rtl_vhdl_msim.mk SIMTOOL=msim build < "/dev/null" (BASIC-15)
+# /softl3/catapult_2024_2/Mgc_home/shared/include/mkfiles/ccs_questasim.mk:209: Warning: Using QuestaSim on Ubuntu requires -B/usr/bin link argument
+# make: Nothing to be done for `build'.
+#     /softl3/catapult_2024_2/Mgc_home/bin/make -f ./scverify/Verify_rtl_vhdl_msim.mk SIMTOOL=msim sim (BASIC-14)
+# Warning: /softl3/catapult_2024_2/Mgc_home/shared/include/mkfiles/ccs_questasim.mk:209: Warning: Using QuestaSim on Ubuntu requires -B/usr/bin link argument
+# ============================================
+# Simulating design entity: scverify_top
+# cd ../..; /softslin/questa_core_prime_2024_2_2/questasim/bin/vsim -t ps -wlf ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/vsim.wlf -l "./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/sim.log"   -L "./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls" -L "./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work"   scverify_top_opt    -c -do "do {./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/scverify_msim_wave.tcl}"
+# Reading pref.tcl
+# 
+# 2024.2_2
+# 
+# vsim -t ps -wlf ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/vsim.wlf -l ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/sim.log -L ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls -L ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work scverify_top_opt -c -do "do {./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/scverify_msim_wave.tcl}" 
+# Start time: 17:20:47 on Nov 24,2026
+# //  Questa Sim-64
+# //  Version 2024.2_2 linux_x86_64 Aug  9 2024
+# //
+# // Unpublished work. Copyright 2024 Siemens
+# //
+# // This material contains trade secrets or otherwise confidential information
+# // owned by Siemens Industry Software Inc. or its affiliates (collectively,
+# // "SISW"), or its licensors. Access to and use of this information is strictly
+# // limited as set forth in the Customer's applicable agreements with SISW.
+# //
+# // This material may not be copied, distributed, or otherwise disclosed outside
+# // of the Customer's facilities without the express written permission of SISW,
+# // and may not be used in any way not expressly authorized by SISW.
+# //
+# Loading /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work/_sc/linux_x86_64_gcc-10.3.0/systemc.so
+# Loading /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/work/Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/work.scverify_top
+# Info: CCS_CLK_CTOR: Clock 'clk' - Using default clock period '10 ns'
+# Loading std.standard
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading work.ccs_wrapper(wrap)#1
+# Info: (vsim-17423) SystemC IEEE 1666 deprecated warnings are suppressed by default. Enable the 'ScShowIeeeDeprecationWarnings' modelsim.ini variable to get more information about the suppressed warnings.
+# Warning: (vsim-4029) The fifo '/scverify_top/TLS_in_fifo_image'
+# (and any connected ports) is undebuggable as the tlm fifo size specified is '-1'. A tlm fifo with an infinite size is not debuggable.
+# Warning: (vsim-4029) The fifo '/scverify_top/TLS_in_wait_ctrl_fifo_image'
+# (and any connected ports) is undebuggable as the tlm fifo size specified is '-1'. A tlm fifo with an infinite size is not debuggable.
+# Warning: (vsim-4029) The fifo '/scverify_top/TLS_out_fifo_scores'
+# (and any connected ports) is undebuggable as the tlm fifo size specified is '-1'. A tlm fifo with an infinite size is not debuggable.
+# Warning: (vsim-4029) The fifo '/scverify_top/TLS_out_wait_ctrl_fifo_scores'
+# (and any connected ports) is undebuggable as the tlm fifo size specified is '-1'. A tlm fifo with an infinite size is not debuggable.
+# Warning: (vsim-4029) The fifo '/scverify_top/user_tb/scores_golden'
+# (and any connected ports) is undebuggable as the tlm fifo size specified is '-1'. A tlm fifo with an infinite size is not debuggable.
+# Loading ieee.std_logic_arith(body)
+# Loading ieee.std_logic_unsigned(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.ccs_sync_out_vld_pkg_v1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.ccs_sync_in_wait_pkg_v1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.mgc_io_sync_pkg_v2
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.ccs_out_pkg_v1
+# Loading ieee.numeric_std(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.block_1r1w_rbw_pkg
+# Loading work.cnn(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.block_1r1w_rbw(rtl)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.block_1r1w_rbw(rtl)#2
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.block_1r1w_rbw(rtl)#3
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.block_1r1w_rbw(rtl)#4
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.block_1r1w_rbw(rtl)#5
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.block_1r1w_rbw(rtl)#6
+# Loading work.cnn_xilinx_rams_block_1r1w_rbw_rport_1_11_16_1728_1_1728_16_1_gen(v1)#1
+# Loading work.cnn_xilinx_rams_block_1r1w_rbw_rwport_en_4_16_16_36864_1_36864_16_1_gen(v1)#1
+# Loading work.cnn_xilinx_rams_block_1r1w_rbw_rwport_en_5_14_16_9216_1_9216_16_1_gen(v1)#1
+# Loading work.cnn_xilinx_rams_block_1r1w_rbw_rwport_en_6_13_16_4608_1_4608_16_1_gen(v1)#1
+# Loading work.cnn_xilinx_rams_block_1r1w_rbw_rwport_en_7_11_16_1152_1_1152_16_1_gen(v1)#1
+# Loading work.cnn_xilinx_rams_block_1r1w_rbw_rwport_en_8_10_16_720_1_720_16_1_gen(v1)#1
+# Loading work.cnn_xilinx_rams_block_1r1w_rbw_rwport_en_9_8_16_180_1_180_16_1_gen(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_20_51200_14_1_pkg(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_21_4800_16_1_pkg(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_22_16000_15_1_pkg(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_23_1800_14_1_pkg(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_24_64_15_1_pkg(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_25_32_15_1_pkg(body)
+# Loading work.cnn_core(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.ccs_out_v1(beh)#1
+# Loading ieee.std_logic_textio(body)
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_20_51200_14_1(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_21_4800_16_1(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_22_16000_15_1(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_23_1800_14_1(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_24_64_15_1(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.cnnmgc_rom_25_32_15_1(v1)#1
+# Loading work.cnn_core_image_rsci_1(v1)#1
+# Loading work.cnn_core_image_rsci_1_image_rsc_wait_ctrl(v1)#1
+# Loading work.cnn_core_image_rsci_1_image_rsc_wait_dp(v1)#1
+# Loading work.cnn_core_done_synci(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.ccs_sync_out_vld_v1(beh)#1
+# Loading work.cnn_core_done_synci_done_wait_ctrl(v1)#1
+# Loading work.cnn_core_start_synci(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.ccs_sync_in_wait_v1(beh)#1
+# Loading work.cnn_core_start_synci_start_wait_ctrl(v1)#1
+# Loading work.cnn_core_image_triosy_obj(v1)#1
+# Loading ./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/mgc_hls.mgc_io_sync_v2(beh)#1
+# Loading work.cnn_core_image_triosy_obj_image_triosy_wait_ctrl(v1)#1
+# Loading work.cnn_core_scores_triosy_obj(v1)#1
+# Loading work.cnn_core_scores_triosy_obj_scores_triosy_wait_ctrl(v1)#1
+# Loading work.cnn_core_staller(v1)#1
+# Loading work.cnn_core_core_fsm(v1)#1
+# Disabling STALL_FLAG toggling
+# do {./Catapult_1/cnn.v1/scverify/rtl_vhdl_msim/scverify_msim_wave.tcl}
+# Reading SCVerify waveform database './Catapult_1/cnn.v1/scverify/ccs_wave_signals.dat'
+# Logging WAVE signals...
+# DONE
+# 0
+# Full simulation run
+# run -all
+# Erreur : load_image : impossible d'ouvrir /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/data/cifar-10-batches-bin/data_batch_1.bin
+# === TESTBENCH HLS cnn() ===
+# Noyau 5x5, 2 image(s) de /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/data/cifar-10-batches-bin/data_batch_1.bin
+# Comparaison exacte Ã  /tp/xph3sei/xph3sei706/ProjetIntegrationArchi/hls/ref/scores_k5.txt
+# Info: Execution of user-supplied C++ testbench 'main()' has completed @ 0 s with exit code = 1
+# 
+# Info: Collecting data completed
+# captured 0 values of image
+# captured 0 values of scores
+# Info: HW reset: TLS_rst active @ 0 s
+# Info: scverify_top/user_tb: Simulation completed
+# 
+# Checking results
+# 'scores'
+# capture count        = 0
+# comparison count     = 0
+# ignore count         = 0
+# error count          = 0
+# stuck in dut fifo    = 0
+# stuck in golden fifo = 0
+# Error: output 'scores' has no golden values to compare against
+# 
+# Error: Nothing to compare, all output capture counts are zero.
+# Error: C++ Testbench 'main()' returned a non-zero exit code (1). Check your testbench.
+# Info: scverify_top/user_tb: Simulation FAILED @ 0 s
+# Info: (vsim-6574) SystemC simulation stopped by user.
+# Info: scverify_top/Monitor: runs with constant clock period 0 s
+# Info: scverify_top/Monitor: Throughput: 1 transaction per 0 s
+# Info: scverify_top/Monitor: No transactions completed.  Skipping latency and throughput reports
+# End time: 17:20:48 on Nov 24,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 5, Suppressed Warnings: 1
+# > end dofile ../cnn.tcl

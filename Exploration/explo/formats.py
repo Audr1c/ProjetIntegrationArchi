@@ -113,7 +113,9 @@ def code_hash():
     """Empreinte du code C++ (hors config.hpp) : invalide le cache si le code change."""
     h = hashlib.sha1(" ".join(paths.CXXFLAGS).encode())
     for p in sorted(paths.CPP.glob("*.[ch]pp")):
-        if p.name != "config.hpp":
+        # coeffs_k*_raw.hpp : ROM de synthèse, regénérées à chaque changement de formats, jamais
+        # compilées par l'exploration (chemin PC) -> hors empreinte
+        if p.name != "config.hpp" and not p.name.endswith("_raw.hpp"):
             h.update(p.name.encode())
             h.update(p.read_bytes())
     return h.hexdigest()[:10]

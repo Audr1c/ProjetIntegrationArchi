@@ -34,7 +34,7 @@ REQUIRED  := data/cifar-10-batches-bin/data_batch_1.bin \
              hls/include/ac_fixed.h
 
 .DEFAULT_GOAL := help
-.PHONY: help init tree tree-check venv check run explore validate efficiency coeffs nonreg tb-hls clean distclean
+.PHONY: help init tree tree-check venv check run explore validate efficiency coeffs nonreg tb-hls hls-report clean distclean
 
 help: ## Affiche cette aide
 	@echo "Commandes disponibles :"
@@ -105,7 +105,7 @@ efficiency: venv ## Efficacité des pas des runs passés (bits gagnés × poids 
 
 # ---------------- HLS (hls/AUDIT_HLS.md) ----------------
 
-coeffs: venv ## Regénère les ROM cpp/coeffs_k3.hpp et coeffs_k5.hpp depuis data/coef/
+coeffs: venv ## Regénère les ROM cpp/coeffs_k*.hpp et coeffs_k*_raw.hpp (APRÈS tout changement de formats)
 	"$(CURDIR)/$(PY)" hls/gen_coeffs.py
 
 nonreg: ## Non-régression bit-exacte : scores de 200 images (k=5) vs hls/ref/scores_k5.txt
@@ -121,10 +121,19 @@ nonreg: ## Non-régression bit-exacte : scores de 200 images (k=5) vs hls/ref/sc
 	    echo "ÉCHEC : scores différents de hls/ref/scores_k5.txt"; \
 	    diff build/scores_k5.txt hls/ref/scores_k5.txt | head -6; exit 1; \
 	fi
+	@cpp/build/main_raw 200 5 data_batch_1.bin --dump build/scores_k5_raw.txt >/dev/null
+	@if cmp -s build/scores_k5.txt build/scores_k5_raw.txt; then \
+	    echo "OK : ROM de synthese (cpp/coeffs_k5_raw.hpp) identiques au bit pres"; \
+	else \
+	    echo "ECHEC : ROM de synthese differentes (formats changes ? relancer make coeffs)"; exit 1; \
+	fi
 
 tb-hls: ## Testbench HLS sans Catapult (ARGS=nb_images, défaut 3)
 	@cmake -S cpp -B cpp/build >/dev/null && cmake --build cpp/build -j >/dev/null
 	cpp/build/tb_hls $(ARGS)
+
+hls-report: ## Résumé des rapports Catapult (ARGS="hls/rapports" ou un dossier hls/work/Catapult_N)
+	$(PYTHON) hls/catapult_report.py $(or $(ARGS),hls/rapports)
 
 clean: ## Supprime les caches et build/
 	rm -rf $(SRC_DIR)/__pycache__ build/*

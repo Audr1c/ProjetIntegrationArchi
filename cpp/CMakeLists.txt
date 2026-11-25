@@ -25,6 +25,11 @@ include_directories(${CMAKE_SOURCE_DIR}/../hls/include)
 
 add_executable(main ./main.cpp ./cnn.cpp ./read_image.cpp)
 
+# Même programme avec les ROM de synthèse (coeffs_k*_raw.hpp, entiers quantifiés) : make nonreg vérifie
+# qu'il donne les mêmes scores au bit près. Regénérer ces ROM après un changement de formats : make coeffs
+add_executable(main_raw ./main.cpp ./cnn.cpp ./read_image.cpp)
+target_compile_definitions(main_raw PRIVATE CNN_ROM_RAW)
+
 # Testbench HLS (hls/tb_hls.cpp) compilé sans Catapult : hls/stub/ remplace mc_scverify.h
 #   CNN_TB_N=5 cpp/build/tb_hls      (compare aux scores de hls/ref/)
 add_executable(tb_hls ../hls/tb_hls.cpp ./cnn.cpp ./read_image.cpp)
@@ -32,4 +37,5 @@ target_include_directories(tb_hls PRIVATE ${CMAKE_SOURCE_DIR}/../hls/stub)
 
 # Racine du dépôt, pour trouver data/ quel que soit le dossier de lancement
 target_compile_definitions(main   PRIVATE "PROJECT_ROOT=\"${CMAKE_SOURCE_DIR}/..\"")
+target_compile_definitions(main_raw PRIVATE "PROJECT_ROOT=\"${CMAKE_SOURCE_DIR}/..\"")
 target_compile_definitions(tb_hls PRIVATE "PROJECT_ROOT=\"${CMAKE_SOURCE_DIR}/..\"")

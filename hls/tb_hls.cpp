@@ -2,7 +2,8 @@
  * Testbench SCVerify de la fonction top cnn() — voir hls/AUDIT_HLS.md C-01, C-06, C-07, C-08.
  * Exclu de la synthèse (hls/cnn.tcl : -exclude true), comme FIR_TESTBENCH.cpp dans hls/Demo_FIR/.
  *
- * Pour chaque image (data_batch_1, indices 0..N-1) :
+ * Pour chaque image (indices 0..N-1 de hls/ref/images_200.bin = les 200 premières de data_batch_1,
+ * versionnées : data/ est ignoré par git et absent d'un clone neuf, ex. sur les machines de l'école) :
  *   lecture + rognage + normalisation (read_image.cpp, en double) -> input_t image[1728]
  *   CCS_DESIGN(cnn)(image, scores)
  *   affichage des scores, de la classe prédite et du label ;
@@ -42,7 +43,7 @@ CCS_MAIN(int argc, char** argv) {
     const string root = env_root ? env_root : PROJECT_ROOT;
 #else
     if (!env_root) {
-        cerr << "Erreur : définir CNN_ROOT (racine du dépôt), par exemple dans hls/cnn.tcl" << endl;
+        cerr << "Erreur : definir CNN_ROOT (racine du depot), par exemple dans hls/cnn.tcl" << endl;
         CCS_RETURN(1);
     }
     const string root = env_root;
@@ -50,23 +51,28 @@ CCS_MAIN(int argc, char** argv) {
     const char* env_n = getenv("CNN_TB_N");
     const int n_images = argc > 1 ? atoi(argv[1]) : (env_n ? atoi(env_n) : 3);
 
-    const string img_path = root + "/data/cifar-10-batches-bin/data_batch_1.bin";
+    // 200 premières images de data_batch_1 (head -c 614600 data_batch_1.bin), mêmes que hls/ref/scores_k*.txt
+    const string img_path = root + "/hls/ref/images_200.bin";
     const string ref_path = root + "/hls/ref/scores_k" + to_string(KS) + ".txt";
 
     cout << "=== TESTBENCH HLS cnn() ===" << endl;
+    if (n_images < 1 || n_images > 200) {
+        cerr << "Erreur : nombre d'images " << n_images << " hors de [1, 200] (" << img_path << ")" << endl;
+        CCS_RETURN(1);
+    }
     cout << "Noyau " << KS << "x" << KS << ", " << n_images << " image(s) de " << img_path << endl;
 
     // ---------- Référence ----------
     ScoreReference ref;
     bool use_ref = false;
     if (!load_reference(ref_path, ref))
-        cout << "Pas de référence lisible (" << ref_path << ") : scores affichés sans comparaison" << endl;
+        cout << "Pas de reference lisible (" << ref_path << ") : scores affiches sans comparaison" << endl;
     else if (ref.signature != format_signature())
-        cout << "Référence " << ref_path << " produite avec d'autres formats : pas de comparaison\n"
-             << "  référence : " << ref.signature << "\n  actuel    : " << format_signature() << endl;
+        cout << "Reference " << ref_path << " produite avec d'autres formats : pas de comparaison\n"
+             << "  reference : " << ref.signature << "\n  actuel    : " << format_signature() << endl;
     else {
         use_ref = true;
-        cout << "Comparaison exacte à " << ref_path << endl;
+        cout << "Comparaison exacte a " << ref_path << endl;
     }
 
     // ---------- Images ----------
@@ -85,7 +91,7 @@ CCS_MAIN(int argc, char** argv) {
                 if (scores[j] > scores[best]) best = j;
             correct += (best == raw.label);
 
-            cout << "image " << i << " : label " << raw.label << ", prédit " << best << ", scores";
+            cout << "image " << i << " : label " << raw.label << ", predit " << best << ", scores";
             for (int j = 0; j < N_CLASSES; j++)
                 cout << " " << scores[j].to_double();
 
@@ -95,7 +101,7 @@ CCS_MAIN(int argc, char** argv) {
                 for (int j = 0; j < N_CLASSES; j++)
                     same = same && (scores[j].to_double() == ref.scores[i][j]);
                 if (!same) mismatches++;
-                cout << (same ? "  [= réf]" : "  [DIFFÉRENT de la référence]");
+                cout << (same ? "  [= ref]" : "  [DIFFERENT de la reference]");
             }
             cout << endl;
         }
@@ -108,7 +114,7 @@ CCS_MAIN(int argc, char** argv) {
     // ---------- Bilan ----------
     cout << "Bonnes classes : " << correct << "/" << n_images << endl;
     if (use_ref)
-        cout << (mismatches ? "ÉCHEC" : "OK") << " : " << compared - mismatches << "/" << compared
-             << " images identiques à la référence" << endl;
+        cout << (mismatches ? "ECHEC" : "OK") << " : " << compared - mismatches << "/" << compared
+             << " images identiques a la reference" << endl;
     CCS_RETURN(mismatches ? 1 : 0);
 }

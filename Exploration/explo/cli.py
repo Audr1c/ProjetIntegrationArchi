@@ -237,6 +237,7 @@ def cmd_select(args):
     if args.apply:
         shutil.copy(out, paths.CPP / "config.hpp")
         console.print("  [green]cpp/config.hpp remplacé[/] (ancienne version récupérable avec git)")
+        console.print("  [yellow]avant la synthèse Catapult : make coeffs[/] (ROM cpp/coeffs_k*_raw.hpp dans les nouveaux formats)")
     flags = " ".join(f"-D{FMT[n][1]}_W={width(config, n)} -D{FMT[n][1]}_I={config[n][0]}" for n in NAMES if n in config)
     console.print(f"  ou sans toucher au code : [dim]cmake -DCMAKE_CXX_FLAGS=\"{flags}\" ..")
 

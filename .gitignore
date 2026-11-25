@@ -190,3 +190,9 @@ Thumbs.db
 # Données des runs versionnées (cache, historiques, synthèses, config.hpp : ~1 Mo compressé).
 # Graphes ignorés (~12 Mo) : regénérer avec `.venv/bin/python Exploration/explore.py plot --no-show`
 Exploration/runs/**/*.png
+
+# ---------- Exceptions HLS (après les règles générales *.bin, *.log) ----------
+# Images de test du testbench HLS (200 premières de data_batch_1, 600 ko) : data/ n'est pas versionné
+!hls/ref/*.bin
+# Rapports Catapult copiés par hls/catapult_report.py --save (rtl.rpt, cycle.rpt, journaux…)
+!hls/rapports/**

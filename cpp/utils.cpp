@@ -43,16 +43,21 @@ template <
     int C_IN, int H, int WD, int C_OUT, int K,
     int W_acc, int I_acc,
     int W_i, int I_i, bool S_i,
-    int W_k, int I_k, bool S_k,
-    int W_b, int I_b, bool S_b,
+    class TK, class TB,
     int W_o, int I_o, bool S_o
 >
 void convolution_feature(
     const ac_fixed<W_i, I_i, S_i> img[C_IN * H * WD],
-    const ac_fixed<W_k, I_k, S_k> ker[C_OUT * C_IN * K * K],
-    const ac_fixed<W_b, I_b, S_b> bia[C_OUT],
+    const TK                      ker[C_OUT * C_IN * K * K],
+    const TB                      bia[C_OUT],
     ac_fixed<W_o, I_o, S_o>       img_o[C_OUT * H * WD]
 ) {
+    typedef typename rom_type<TK>::type k_t;    // formats des coefficients (ac_fixed)
+    typedef typename rom_type<TB>::type b_t;
+    constexpr int W_k = k_t::width, I_k = k_t::i_width;
+    constexpr bool S_k = k_t::sign;
+    constexpr int W_b = b_t::width, I_b = b_t::i_width;
+
     // image  : [L][H][W]      kernel : [C][L][M][N]      sortie : [C][H][W]
     // S[c][r][k] = sum_{l,m,n} I[l][r+m-M/2][k+n-N/2] * K[c][l][m][n] + b[c]
 
@@ -73,8 +78,8 @@ void convolution_feature(
                     for (int m = 0; m < K; m++)
                         for (int n = 0; n < K; n++)
                             acc += get_valid_pixel<H, WD>(img + chan_i * H * WD, row + m - K / 2, col + n - K / 2)
-                                 * ker[k_base + (chan_i * K + m) * K + n];
-                acc += bia[chan];
+                                 * rom_value(ker[k_base + (chan_i * K + m) * K + n]);
+                acc += rom_value(bia[chan]);
                 img_o[(chan * H + row) * WD + col] = acc;  // une seule quantification
             }
 }
@@ -87,16 +92,21 @@ template <
     int C, int H, int WD, int N,
     int W_acc, int I_acc,
     int W_a, int I_a, bool S_a,
-    int W_m, int I_m, bool S_m,
-    int W_c, int I_c, bool S_c,
+    class TM, class TC,
     int W_o, int I_o, bool S_o
 >
 void m_acc_hwc(
     const ac_fixed<W_a, I_a, S_a> A[C * H * WD],
-    const ac_fixed<W_m, I_m, S_m> B[C * H * WD * N],
-    const ac_fixed<W_c, I_c, S_c> Cb[N],
+    const TM                      B[C * H * WD * N],
+    const TC                      Cb[N],
     ac_fixed<W_o, I_o, S_o>       S[N]
 ) {
+    typedef typename rom_type<TM>::type m_t;    // formats des coefficients (ac_fixed)
+    typedef typename rom_type<TC>::type c_t;
+    constexpr int W_m = m_t::width, I_m = m_t::i_width;
+    constexpr bool S_m = m_t::sign;
+    constexpr int W_c = c_t::width, I_c = c_t::i_width;
+
     // S_j = sum_f A_f * B_{f,j} + C_j     avec f = (row*W + col)*C + chan (ordre HWC)
     typedef typename ac_fixed<W_a, I_a, S_a>::template rt<W_m, I_m, S_m>::mult mult_t;
     constexpr int G      = 8;
@@ -106,7 +116,7 @@ void m_acc_hwc(
 
     acc_t acc[N];
     for (int j = 0; j < N; j++)
-        acc[j] = Cb[j];
+        acc[j] = rom_value(Cb[j]);
     // row, col, chan : f croît de 1 à chaque itération ; B est parcourue ligne par ligne (contiguë)
     for (int row = 0; row < H; row++)
         for (int col = 0; col < WD; col++)
@@ -114,7 +124,7 @@ void m_acc_hwc(
                 const int f = (row * WD + col) * C + chan;
                 const ac_fixed<W_a, I_a, S_a> a = A[(chan * H + row) * WD + col];
                 for (int j = 0; j < N; j++)
-                    acc[j] += a * B[f * N + j];
+                    acc[j] += a * rom_value(B[f * N + j]);
             }
 
     for (int j = 0; j < N; j++)
