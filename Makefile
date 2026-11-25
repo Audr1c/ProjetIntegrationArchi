@@ -24,9 +24,9 @@ SRC_DIR := python
 SRCS    := $(wildcard $(SRC_DIR)/*.py)
 
 # --- Arborescence ---
-DIRS      := python cpp hls hls/include fpga data data/coef doc rapport build Results Exploration
+DIRS      := python cpp hls hls/include fpga data data/coef doc rapport build Results Exploration ExplorationHLS
 # Seuls ces éléments sont autorisés à la racine du dépôt
-ROOT_OK   := $(DIRS) Makefile README.md CLAUDE.md AGENTS.md requirements.txt \
+ROOT_OK   := $(DIRS) Makefile README.md CLAUDE.md AGENTS.md requirements.txt requirements-ecole.txt \
              .gitignore .gitattributes .git .venv .claude .vscode
 # Fichiers indispensables
 REQUIRED  := data/cifar-10-batches-bin/data_batch_1.bin \
@@ -34,7 +34,7 @@ REQUIRED  := data/cifar-10-batches-bin/data_batch_1.bin \
              hls/include/ac_fixed.h
 
 .DEFAULT_GOAL := help
-.PHONY: help init tree tree-check venv check run explore validate efficiency coeffs nonreg tb-hls hls-report carte carte-hook clean distclean
+.PHONY: help init tree tree-check venv venv-ecole check run explore explore-hls validate efficiency coeffs nonreg tb-hls hls-report carte carte-hook clean distclean
 
 help: ## Affiche cette aide
 	@echo "Commandes disponibles :"
@@ -87,6 +87,19 @@ $(VENV)/.installed: requirements.txt
 
 venv: $(VENV)/.installed ## Crée le venv et installe requirements.txt
 
+# École : Python 3.8.10, pip 21.1.2, pas de sudo. Si « python3 -m venv » échoue (paquet python3-venv absent),
+# installation dans ~/.local (pip --user) ; le venv à moitié créé est alors à effacer à la main (.venv/).
+# Le témoin .installed évite qu'une autre cible ne relance l'installation de requirements.txt
+# (numpy >= 1.26 n'existe pas pour Python 3.8).
+venv-ecole: ## (École, Python 3.8, sans sudo) .venv + requirements-ecole.txt, sinon pip --user
+	@if $(PYTHON) -m venv $(VENV); then \
+	    $(PIP) install -r requirements-ecole.txt && touch $(VENV)/.installed; \
+	else \
+	    echo "python3 -m venv indisponible : installation dans ~/.local (pip --user)"; \
+	    echo "(effacer le dossier .venv/ incomplet s'il existe)"; \
+	    $(PYTHON) -m pip install --user -r requirements-ecole.txt; \
+	fi
+
 check: tree-check venv ## Vérifie l'arborescence et compile les .py
 	$(PY) -m py_compile $(SRCS)
 	@echo "Compilation OK : $(SRCS)"
@@ -104,6 +117,11 @@ efficiency: venv ## Efficacité des pas des runs passés (bits gagnés × poids 
 	MPLCONFIGDIR="$${MPLCONFIGDIR:-$${TMPDIR:-/tmp}}" "$(CURDIR)/$(PY)" Exploration/efficiency.py $(ARGS)
 
 # ---------------- HLS (hls/AUDIT_HLS.md) ----------------
+
+# Python du venv s'il existe, sinon python3 (école avec pip --user) ; aucune dépendance obligatoire
+PYHLS = $(if $(wildcard $(PY)),$(PY),$(PYTHON))
+explore-hls: ## Exploration des directives Catapult (ARGS="run", "run --fake", "list", "show", "plot", "tcl")
+	MPLCONFIGDIR="$${MPLCONFIGDIR:-$${TMPDIR:-/tmp}}" $(PYHLS) ExplorationHLS/explore_hls.py $(or $(ARGS),--help)
 
 coeffs: venv ## Regénère les ROM cpp/coeffs_k*.hpp et coeffs_k*_raw.hpp (APRÈS tout changement de formats)
 	"$(CURDIR)/$(PY)" hls/gen_coeffs.py

@@ -486,3 +486,6 @@ void cnn(const input_t image[C0*IMG_H*IMG_W], out_t scores[N_CLASSES]) {
 9. [x] **C-02, C-03** : `hls/cnn.tcl` lancé à l'école le 2026-11-24 : `go extract` OK, bibliothèque Zynq validée. C-10 → C-12 corrigés ensuite.
 10. [~] `go extract` ✅ ; SCVerify : relancer avec `hls/ref/images_200.bin` (C-10) — C++ d'abord, RTL en tâche de fond (C-12).
 11. [ ] **D-03, D-04, D-06, D-08** : optimisations selon les rapports de Catapult (surface, latence, BRAM).
+12. [~] **Pipeline, déroulage, mémoires** : exploration automatique `ExplorationHLS/` (2026-11-25). Seuils retenus :
+    latence ≤ 10 M cycles, BRAM ≤ 60 %, DSP ≤ 50 %, LUT ≤ 50 %, slack ≥ 0. Résultat à rejouer dans `cnn.tcl`
+    par `DIRECTIVES_FILE` ; `CNN_STOP_AT = assembly` permet à l'exploration de construire son projet de base.

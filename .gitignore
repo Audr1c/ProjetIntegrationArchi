@@ -191,6 +191,13 @@ Thumbs.db
 # Graphes ignorés (~12 Mo) : regénérer avec `.venv/bin/python Exploration/explore.py plot --no-show`
 Exploration/runs/**/*.png
 
+# ---------- Exploration des directives Catapult (ExplorationHLS/) ----------
+# Versionné : runs/cache.jsonl et runs/<run>/ (historique, synthèse, directives, rapports .gz).
+# Ignorés : graphes (regénérer : make explore-hls ARGS="plot <run>"), runs du faux Catapult,
+# projets Catapult de travail (ExplorationHLS/work/ : déjà couvert par work/).
+ExplorationHLS/runs/**/*.png
+ExplorationHLS/runs_fake/
+
 # ---------- Exceptions HLS (après les règles générales *.bin, *.log) ----------
 # Images de test du testbench HLS (200 premières de data_batch_1, 600 ko) : data/ n'est pas versionné
 !hls/ref/*.bin

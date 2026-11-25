@@ -69,7 +69,7 @@ def fichiers_depot() -> list[str]:
 
 
 def groupe_de(f: str) -> str:
-    for prefixe, g in (("python/", "python"), ("Exploration/", "explo"), ("cpp/", "cpp"),
+    for prefixe, g in (("python/", "python"), ("ExplorationHLS/", "explohls"), ("Exploration/", "explo"), ("cpp/", "cpp"),
                        ("hls/ref/", "donnees"), ("hls/", "hls")):
         if f.startswith(prefixe):
             return g

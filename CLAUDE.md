@@ -20,6 +20,7 @@ commentaire de fin de ligne compris. Les commentaires du C++ et des .py gardent 
 | 2a. C++ virgule fixe | `cpp/` : même réseau en `ac_fixed<W,I,S>`, formats dans `cpp/config.hpp` | ✅ fini, ~89 % sur 200 img |
 | 2b. Exploration des formats | `Exploration/` : recherche auto du nb de bits minimal par format | ✅ 12 runs complets (+2 anciens), **non commité** (`?? Exploration/`) |
 | 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A…E) : A, B, C faits ; 1er `go extract` OK le 2026-11-24 (46,1 M cycles, ~130 RAMB18, slack −2,59 ns). Le 2026-11-25 : boucles nommées (D-07), config **s5949** appliquée (D-01), hiérarchie 4 blocs + registres + RAM double port (E-01…E-03, **pas encore synthétisés**) | 🔄 synthèse à l'école, puis pipeline/déroulage + script d'exploration HLS |
+| 2d. Exploration HLS | `ExplorationHLS/` : recherche auto des directives (pipeline, déroulage, RAM) sous seuils, tableau de bord rich, faux Catapult pour tester ; testé Python 3.8 + maquette de `catapult` | 🔄 **jamais lancé avec le vrai Catapult** (voir son README.md) |
 | 3. FPGA Vivado / Zybo Z7 | `fpga/` vide | ⏳ pas commencé |
 | Rapport | `rapport/` vide | ⏳ pas commencé |
 
@@ -79,6 +80,13 @@ Exploration/       outil d'exploration bits/précision (Python + rich), voir plu
   explo/           paths, formats, runner, monitor, search, cache, sessions, dashboard, plots, cli
   runs/            résultats (cache.jsonl ~5600 évals, un dossier par run, sessions/ ; PNG non versionnés)
   build/           binaires temporaires de l'exploration (ignoré par git)
+ExplorationHLS/    exploration des DIRECTIVES Catapult (README.md = mode d'emploi école, seuils, méthode)
+  explore_hls.py   point d'entrée : run [--fake] | base | list | show | plot | tcl (docstring = options)
+  hlsexplo/        paths, space (réglages par bloc, échelle LADDER, replis, directives, Discovery des chemins),
+                   limits (SEUILS), model (latence/ressources analytiques, recalé), backend (CatapultBackend :
+                   projet de base = cnn.tcl avec CNN_STOP_AT=assembly + découverte, puis 1 catapult par candidat ;
+                   FakeBackend), search (référence, montée gain/coût, repli), store, dashboard, plots, report
+  runs/            cache.jsonl + un dossier par run (versionnés, PNG ignorés) ; runs_fake/ et work/ ignorés
 Results/           rapports Markdown (précision Python, dynamique des valeurs)
 data/              CIFAR-10 binaire (ignoré par git, ~180 Mo) ; data/coef/ versionné ; SEI_data.tgz = archive source
 doc/carte/         CARTE INTERACTIVE du projet : carte.html (ouvrir dans un navigateur ; #n=<fichier>, #p=<n° parcours>)
@@ -125,6 +133,9 @@ make tb-hls ARGS=5   # testbench HLS sur PC (sans Catapult)
 make coeffs          # regénère les ROM cpp/coeffs_k*.hpp ET coeffs_k*_raw.hpp : après un changement de data/coef/
                      # OU DES FORMATS de config.hpp (sinon #error à la synthèse) ; puis make nonreg
 make hls-report ARGS="hls/rapports"   # résumé des rapports Catapult (= python3 hls/catapult_report.py …)
+make explore-hls ARGS="run --fake"     # exploration des directives, faux Catapult (test, ~1 min)
+make explore-hls ARGS="run"            # vraie exploration (école, après source hls/bash_mentor_24)
+make venv-ecole                        # école (Python 3.8, sans sudo) : .venv + requirements-ecole.txt, sinon pip --user
 # École : source hls/bash_mentor_24 ; mkdir -p hls/work && cd hls/work && catapult -shell -file ../cnn.tcl
 
 # Modèle C++
@@ -220,6 +231,12 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
 - `Exploration/runs/` : les données texte sont versionnées (cache, history, summary, config.hpp ≈ 1 Mo compressé),
   les **PNG sont ignorés** (`Exploration/runs/**/*.png`) → regénérer avec `explore.py plot --no-show`
   (sauf `curves.png`, produit seulement pendant un run). Graphes du README copiés dans `doc/img/`.
+- **Python de l'école = 3.8.10 (pip 21.1.2, sans sudo)** : `ExplorationHLS/` et `hls/catapult_report.py` y tournent.
+  Pas de syntaxe 3.9+ à l'exécution (`list[int]` seulement en annotation avec `from __future__ import annotations`,
+  pas de `dict | dict`, `str.removeprefix`, `match`, `functools.cache`). Tester : Python 3.8 de uv dans le scratchpad
+  (`UV_PYTHON_INSTALL_DIR=$TMPDIR/uvpy uv python install 3.8`), venv + `pip==21.1.2` + `requirements-ecole.txt`.
+  `requirements.txt` (machine perso) ne doit PAS être modifié pour l'école : c'est `requirements-ecole.txt`.
+- Tcl généré par `ExplorationHLS` (base.tcl, cand.tcl, best_directives.tcl) : ASCII seulement (`space.ascii()`).
 - Appeler le venv par un chemin sans `..` (ex. `.venv/bin/python` depuis la racine), sinon warning `sys.prefix`.
 
 ## Pour la suite (phase HLS / FPGA)

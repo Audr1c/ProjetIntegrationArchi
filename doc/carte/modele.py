@@ -22,6 +22,7 @@ GROUPES = [
     ("explo",   "Exploration des formats"),
     ("cpp",     "Modèle C++ virgule fixe"),
     ("hls",     "HLS : Catapult, SCVerify"),
+    ("explohls", "Exploration des directives HLS"),
     ("outils",  "Outils externes"),
     ("donnees", "Données, résultats, docs"),
 ]
@@ -82,6 +83,19 @@ ROLES = {
     "Exploration/explo/dashboard.py": "Tableau de bord rich en direct",
     "Exploration/explo/sessions.py": "Sessions reprenables après Ctrl-C",
     "Exploration/pistes_prochaine_exploration.md": "Idées pour les prochains runs",
+    "ExplorationHLS/explore_hls.py":      "Point d'entrée : run, base, list, show, plot, tcl (--fake)",
+    "ExplorationHLS/README.md":           "Mode d'emploi à l'école, seuils, méthode, premier run",
+    "ExplorationHLS/hlsexplo/paths.py":   "Chemins, carte XC7Z020, empreinte du code",
+    "ExplorationHLS/hlsexplo/space.py":   "Réglages par bloc, échelle, replis, directives Tcl, découverte",
+    "ExplorationHLS/hlsexplo/limits.py":  "Seuils : latence, BRAM, DSP, LUT, slack, directives",
+    "ExplorationHLS/hlsexplo/model.py":   "Modèle analytique latence / ressources, recalé sur Catapult",
+    "ExplorationHLS/hlsexplo/backend.py": "Pilote Catapult (projet de base, candidats) ou faux Catapult",
+    "ExplorationHLS/hlsexplo/search.py":  "Référence, montée gain/coût, repli",
+    "ExplorationHLS/hlsexplo/store.py":   "Cache des synthèses et dossiers de run",
+    "ExplorationHLS/hlsexplo/dashboard.py": "Tableau de bord rich (ou texte simple)",
+    "ExplorationHLS/hlsexplo/plots.py":   "pareto.png, evolution.png",
+    "ExplorationHLS/hlsexplo/report.py":  "summary.json, best_directives.tcl, tableau du chemin",
+    "requirements-ecole.txt":             "Paquets Python bornés pour Python 3.8 (école)",
 
     "CLAUDE.md":        "Contexte complet du projet (à lire en premier)",
     "README.md":        "Présentation du projet",
@@ -112,6 +126,14 @@ VIRTUELS = {
                       "Catapult_N/cnn.vK/ : rtl.vhdl, rtl.rpt, cycle.rpt, messages.txt, scverify/ (Makefiles, sim.log) ; "
                       "catapult.log = transcript complet. Créé en lançant cnn.tcl depuis hls/work/.",
                       [r"hls/work", r"rtl\.rpt", r"cycle\.rpt"]),
+    "dir:runshls":   ("donnees", "ExplorationHLS/runs/", "Résultats de l'exploration des directives",
+                      "cache.jsonl (une ligne par synthèse), un dossier par run : params, history, summary, "
+                      "best_directives.tcl, evals/<id>/ (cand.tcl, journal, rtl.rpt.gz). PNG non versionnés.",
+                      [r"ExplorationHLS/runs"]),
+    "dir:workhls":   ("donnees", "ExplorationHLS/work/", "Projets Catapult de l'exploration (non versionné)",
+                      "w<N>/ : un projet de base par worker (cnn.tcl jusqu'à go assembly), base.tcl, cand.tcl, "
+                      "loops.txt / resources.txt (chemins découverts), journaux.",
+                      [r"ExplorationHLS/work", r"paths\.WORK"]),
     "dir:rapports":  ("donnees", "hls/rapports/", "Rapports Catapult sauvegardés (versionnés) + resume.md",
                       "Un dossier <solution>_<date>/ par sauvegarde : rtl.rpt, cycle.rpt, messages.txt, directives.tcl, "
                       "sim.log, catapult.log et resume.md (tableau lisible).",
@@ -223,6 +245,16 @@ LIENS = [
     ("dir:hlswork", "lance", "ext:precision", "rtl.vhdl.psr (à faire)"),
     ("ext:precision", "lance", "ext:vivado", "(phase 3)"),
     ("ext:vivado", "lance", "ext:zybo", "bitstream (phase 3)"),
+    # Exploration des directives HLS
+    ("ExplorationHLS/hlsexplo/backend.py", "lance", "ext:catapult", "base.tcl puis cand.tcl par candidat"),
+    ("ExplorationHLS/hlsexplo/backend.py", "lit", "hls/cnn.tcl", "sourcé avec CNN_STOP_AT = assembly"),
+    ("ExplorationHLS/hlsexplo/backend.py", "lance", "hls/catapult_report.py", "parse_solution (import)"),
+    ("ExplorationHLS/hlsexplo/backend.py", "ecrit", "dir:workhls", "projets, scripts, journaux"),
+    ("ExplorationHLS/hlsexplo/store.py", "ecrit", "dir:runshls", "cache.jsonl, history, summary"),
+    ("ExplorationHLS/hlsexplo/report.py", "ecrit", "dir:runshls", "best_directives.tcl"),
+    ("ExplorationHLS/hlsexplo/plots.py", "ecrit", "dir:runshls", "PNG"),
+    ("ExplorationHLS/hlsexplo/model.py", "lit", "cpp/config.hpp", "largeurs des formats (BRAM)"),
+    ("hls/cnn.tcl", "lit", "dir:runshls", "DIRECTIVES_FILE = best_directives.tcl"),
 ]
 
 # Parcours : (titre, explication, [(nœud, ce qu'on y fait), ...])
@@ -266,6 +298,16 @@ PARCOURS = [
         ("Exploration/explo/monitor.py", "arrêt anticipé des candidats perdus"),
         ("Exploration/explo/cache.py", "évaluation mise en cache"),
         ("dir:runs", "résultats ; make explore ARGS=\"plot --no-show\" pour les graphes"),
+    ]),
+    ("Explorer les directives Catapult (école)", "Pipeline, déroulage, mémoires : la config la moins chère sous 10 M cycles.", [
+        ("hls/bash_mentor_24", "source hls/bash_mentor_24 (Catapult dans le PATH)"),
+        ("make:venv-ecole", "une fois : make venv-ecole (Python 3.8, sans sudo)"),
+        ("make:explore-hls", "make explore-hls ARGS=\"run\" (d'abord ARGS=\"run --fake\" pour voir)"),
+        ("ExplorationHLS/hlsexplo/backend.py", "projet de base : cnn.tcl jusqu'à go assembly, découverte des chemins"),
+        ("ExplorationHLS/hlsexplo/search.py", "référence, montée (gain/coût prédit), repli"),
+        ("ExplorationHLS/hlsexplo/limits.py", "seuils : latence, BRAM, DSP, LUT, slack"),
+        ("dir:runshls", "git add ExplorationHLS/runs && commit"),
+        ("hls/cnn.tcl", "set DIRECTIVES_FILE …/best_directives.tcl, puis SCVerify"),
     ]),
     ("Vérifier sur d'autres images", "La précision d'exploration est mesurée sur data_batch_1 (entraînement).", [
         ("make:validate", "make validate ARGS=\"<run> <run>:ref float -b test 2\""),

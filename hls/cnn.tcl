@@ -57,6 +57,10 @@ set DP_RAM Xilinx_RAMS.BLOCK_DPRAM_RBW
 # Canaux entre blocs (pool1_chan, pool2_chan) : 2 = ping-pong (une couche traite l'image n+1 pendant que
 # la suivante traite l'image n ; memoire doublee), 1 = memoire unique (pas de recouvrement).
 set CHAN_STAGES 2
+# Directives choisies par l'exploration (ExplorationHLS) : chemin d'un best_directives.tcl, relatif a la
+# racine du depot (ex. ExplorationHLS/runs/<run>/best_directives.tcl). Non vide : il REMPLACE les
+# directives memoire ci-dessus (DUAL_PORT, CHAN_STAGES) et ajoute pipeline / deroulage.
+set DIRECTIVES_FILE ""
 
 # Cible FPGA : notre carte est un Zybo Z7-20 = XC7Z020-1CLG400C (lu sur la boite le 2026-11-25) :
 # 280 RAMB18, 220 DSP, 53 200 LUT. (Z7-10 = xc7z010clg400-1, non utilise.)
@@ -156,8 +160,19 @@ cnn_try {/cnn} -DONE_FLAG done
 
 # ---------------- Architecture, ordonnancement, RTL ----------------
 go assembly
+# Arret ici pour l'exploration des directives (ExplorationHLS/) : elle source ce script avec
+# CNN_STOP_AT = assembly, sauve le projet "neutre" (aucune directive de boucle ni de memoire) puis
+# branche une solution par candidat (solution new -state assembly). Sans cette variable : rien ne change.
+if {[info exists ::CNN_STOP_AT] && $::CNN_STOP_AT eq "assembly"} {
+    puts "\[cnn\] CNN_STOP_AT = assembly : arret apres go assembly"
+    return
+}
+if {$DIRECTIVES_FILE ne ""} {
+    puts "\[cnn\] directives lues dans $DIRECTIVES_FILE"
+    source [file join $ROOT $DIRECTIVES_FILE]
+} else {
 # Memoires (E-02, E-03). Chemins : bloc = /cnn/<bloc>/core/<tableau>:rsc ; canal du top = /cnn/<canal>:cns
-# (variantes essayees par cnn_try). Directives de boucles (pipeline, deroulage) : partie D, plus tard.
+# (variantes essayees par cnn_try). Directives de boucles (pipeline, deroulage) : ExplorationHLS.
 if {$DUAL_PORT} {
     foreach {blk arr} {layer1 image2  layer2 image4  layer3 image6} {
         cnn_try [list /cnn/$blk/core/$arr:rsc /$blk/core/$arr:rsc /cnn/$blk/$arr:rsc] -MAP_TO_MODULE $DP_RAM
@@ -168,6 +183,7 @@ foreach ch {pool1_chan pool2_chan} {
     if {$DUAL_PORT} {
         cnn_try [list /cnn/$ch:cns /cnn/$ch:rsc] -MAP_TO_MODULE $DP_RAM
     }
+}
 }
 go architect
 go allocate

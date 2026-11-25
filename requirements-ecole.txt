@@ -1,0 +1,9 @@
+# Machines de l'école : Python 3.8.10, pip 21.1.2, sans sudo  ->  make venv-ecole
+# Mêmes paquets que requirements.txt (inchangé, pour la machine perso), bornés aux dernières versions
+# qui supportent Python 3.8. Testé avec Python 3.8 + pip 21.1.2 (venv neuf) le 2026-11-25.
+# Minimum pour l'exploration HLS (ExplorationHLS/) : rich (tableau de bord) ; matplotlib pour les graphes.
+numpy>=1.19,<1.25        # référence Python, dépendance de matplotlib
+matplotlib>=3.3,<3.8     # graphes (ExplorationHLS/runs/<run>/*.png, Exploration/)
+pillow>=8.0,<11          # images (tests C++/HLS)
+tqdm
+rich>=12,<14             # tableaux de bord des explorations
