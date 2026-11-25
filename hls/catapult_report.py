@@ -180,6 +180,11 @@ def parse_solution(sol: Path) -> dict:
 
     # Processus : latence / débit en cycles (ligne « Design Total »)
     procs = parse_table(find_section(s_rtl, "Processes/Blocks") or find_section(s_cyc, "Processes/Blocks"))
+    # Un processus par bloc hiérarchique (layer1, layer2, ...) : latence de chaque couche
+    d["processes"] = [{"name": row.get("Process", "").strip(), "real_ops": num(row.get("Real Operation(s) count")),
+                       "latency_cycles": num(row.get("Latency")), "throughput_cycles": num(row.get("Throughput"))}
+                      for row in procs
+                      if row.get("Process", "").strip() and not row.get("Process", "").startswith("Design Total")]
     for row in procs:
         if row.get("Process", "").startswith("Design Total"):
             d["real_ops"] = num(row.get("Real Operation(s) count"))
@@ -300,6 +305,14 @@ def detail(d: dict, top: int) -> str:
     out.append(f"- Timing : chemin critique {fmt(d.get('max_delay_ns'), '.2f')} ns, slack {fmt(d.get('slack_ns'), '.2f')} ns"
                + ("  ⚠ NÉGATIF" if (d.get("slack_ns") or 0) < 0 else ""))
     out.append("")
+
+    procs = d.get("processes") or []
+    if len(procs) > 1:
+        out += ["### Blocs (processus)", "", "| Bloc | Operations | Latence (cycles) | Debit (cycles) |", "|---|--:|--:|--:|"]
+        for pr in procs:
+            out.append(f"| `{pr['name']}` | {fmt(pr['real_ops'], ',')} | {fmt(pr['latency_cycles'], ',')} | "
+                       f"{fmt(pr['throughput_cycles'], ',')} |")
+        out.append("")
 
     if d["memories"]:
         out += ["### Mémoires", "",

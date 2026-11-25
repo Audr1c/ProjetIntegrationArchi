@@ -55,14 +55,17 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 | C-07 | 🟠 | testbench | Simulation RTL de ~10,7 M MAC/image : impossible sur 1000 images | ✅ fait (commit C) |
 | C-08 | 🟠 | `main.cpp:14-16` | `PROJECT_ROOT` vaut `".."` hors CMake : chemins faux dans le dossier de SCVerify | ✅ fait (commit C) |
 | C-09 | 🟠 | `CMakeLists.txt`, `Exploration/explo/runner.py` | Nouveaux fichiers et `-DKS`, cache d'exploration invalidé | ✅ fait (commits A/B/C) |
-| D-01 | 🟠 | `config.hpp` | Config actuelle = 16 bits « large » + accumulateurs auto (~40 bits) | ✅ décidé : large pour l'instant |
+| D-01 | 🟠 | `config.hpp` | Config actuelle = 16 bits « large » + accumulateurs auto (~40 bits) | ✅ fait : run `s5949` appliqué le 2026-11-25 |
 | D-02 | 🟡 | `utils.cpp:13-19`, `cnn.cpp` | ReLU = passe complète en plus sur chaque feature map | Après A/B |
 | D-03 | 🟡 | `utils.cpp:33-37` | Test de padding (6 comparaisons) à chaque MAC, dont un test de canal inutile | Après A/B |
 | D-04 | 🟠 | `cnn.cpp` | conv1 stockée en entier (36 864 mots) avant le pool : fusion conv+pool possible | Après A/B |
 | D-05 | 🟡 | `utils.cpp:157` | Max-pool : lecture initiale redondante (10 lectures pour 9 valeurs) | Après A/B |
 | D-06 | ⚪ | — | Latence : 10,7 M MAC/image ≈ 107 ms à 1 MAC/cycle et 100 MHz | Info |
-| D-07 | 🟡 | boucles | Pas de labels de boucles : impossible de cibler `-UNROLL` / `-PIPELINE_INIT_INTERVAL` | Avec A/B |
+| D-07 | 🟡 | boucles | Pas de labels de boucles : impossible de cibler `-UNROLL` / `-PIPELINE_INIT_INTERVAL` | ✅ fait (2026-11-25) |
 | D-08 | 🟡 | sortie | 10 scores en sortie, alors qu'un argmax matériel (`ac_int<4>`) suffirait pour l'affichage | Optionnel |
+| E-01 | 🟠 | `cnn.cpp`, `cnn.tcl` | Un seul bloc : multiplieur partagé entre les 3 conv, multiplexeurs sur le chemin critique (−2,59 ns) | 🔄 codé, à synthétiser |
+| E-02 | 🟡 | `cnn.tcl` | Petits tableaux (biais, pool3) en RAM/ROM : 1 BRAM18 chacun pour quelques centaines de bits | 🔄 codé, à synthétiser |
+| E-03 | 🟡 | `cnn.tcl` | Feature maps en RAM 1R1W : 1 accès par cycle, limite le futur pipeline / déroulage | 🔄 codé, à synthétiser |
 
 ---
 
@@ -300,6 +303,10 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 ## D : qualité du matériel (après la première synthèse)
 
 ### D-01 🟠 Choisir la configuration de formats avant de synthétiser
+- **Fait (2026-11-25)** : `explore.py select 20261119-223144_k5_t1_s5949 --apply`, puis `make coeffs` et nouvelle
+  référence `hls/ref/scores_k5.txt`. 88,10 % sur 1000 images de data_batch_1 (identique à l'exploration),
+  80,65 % sur test_batch (float : 81,62 %, `Exploration/runs/validation_k5.md`). L'ancienne config large reste dans git.
+  `hls/ref/scores_k3.txt` correspond toujours à l'ancienne config large en 3x3.
 - `config.hpp` contient la config **large** : tout en 16 bits, avec des accumulateurs automatiques d'environ 40 bits (produit exact + 11 bits de garde). Le run `20261119-223144_k5_t1_s5949` passe à 10,8 bits moyens (88,1 %, réf. 89,0 %), soit environ −40 % de BRAM (voir B-06).
 - Le multiplieur d'un DSP48E1 fait 25×18 bits signés. Avec des poids ≤ 18 bits et des données ≤ 25 bits, chaque MAC tient dans un seul DSP.
 - Vérifier sur `test_batch` (`make validate`) avant de figer la config.
@@ -338,13 +345,52 @@ Gravité : 🔴 bloquant · 🟠 majeur · 🟡 mineur · ⚪ info.
 - À 1 MAC/cycle à 100 MHz, environ **107 ms/image (~9 img/s)**, ce qui suffit pour une démo.
 - conv2 représente 69 % du calcul. C'est la première cible pour `-UNROLL` (sur `MAC_N`, par exemple ×5), à condition de découper les mémoires (`-BLOCK_SIZE` / `-INTERLEAVE`) pour avoir plusieurs lectures par cycle.
 
-### D-07 🟡 Labels de boucles
+### D-07 🟡 Labels de boucles — ✅ fait (2026-11-25)
+- Labels posés dans `cpp/utils.cpp` : `RELU`, `CONV_CO/ROW/COL`, `MAC_CI/M/N`, `FC_INIT/ROW/COL/CHAN/J/OUT`,
+  `POOL_CO/ROW/COL/M/N`. Chemin Catapult : `/cnn/<bloc>/core/<instance de la fonction>:<label>` (voir `cycle.rpt`).
 - Les directives visent des chemins comme `/FIR_HARDWARE/core/MAC` [FIR]. Sans label, Catapult génère des noms (`for#1`…) qui changent quand le code bouge.
 - Correction : nommer toutes les boucles (`CONV_CO:`, `CONV_ROW:`, `CONV_COL:`, `MAC_CI:`, `MAC_M:`, `MAC_N:`, `POOL_*`, `FC_*`).
 
 ### D-08 🟡 Argmax en matériel (optionnel)
 - Pour l'affichage, seule la classe compte. Une sortie `ac_int<4,false> &classe` en plus (ou à la place) de `scores[10]` simplifie l'interface AXI.
 - Garder `scores` tant que C-06 et C-07 s'en servent.
+
+---
+
+## E : architecture sans pipeline ni déroulage (2026-11-25)
+
+Toutes bit-exactes (`make nonreg`, `make tb-hls`) ; directives **jamais encore passées dans Catapult** :
+lire les lignes `[cnn] directive OK / ATTENTION` du log à la première synthèse.
+
+### E-01 🟠 Hiérarchie : un bloc par couche
+- **Constat (cnn.v1)** : chemin critique de 12,59 ns pour 10 ns. Il passe par le multiplieur (5,3 ns), l'additionneur (2,0 ns)
+  et **deux `mux1hot` (2 × 1,66 ns) qui partagent ce multiplieur entre conv1, conv2 et conv3**.
+  Catapult n'avait gardé que 5 DSP pour tout le réseau.
+- **Fait** : `cpp/cnn.cpp` découpé en 4 fonctions `#pragma hls_design` : `layer1` (conv1+relu+pool1), `layer2`, `layer3`,
+  `dense`. Elles sont reliées par `static ac_channel<fm_chan<T, N>>` (struct à un seul tableau : mémoire partagée,
+  manuel Catapult « Sharing Memories between Blocks » §3.5) : `pool1_chan` (9216), `pool2_chan` (1152), `pool3_chan` (180).
+  Chaque bloc déclare ses ROM (`CNN_ROM_LAYER`, encadrement généré par `hls/gen_coeffs.py`). Dans `cnn.tcl`,
+  `-DESIGN_HIERARCHY {cnn layer1 layer2 layer3 dense}`.
+- Sur PC, `ac_channel` vient de `hls/stub/ac_channel.h` (FIFO minimale écrite pour le projet). Catapult utilise le sien.
+- **Effets attendus** : plus de multiplexeurs de partage (marge ≥ 0 ?) ; 1 multiplieur par couche (quelques DSP de plus) ;
+  avec des canaux ping-pong (`CHAN_STAGES 2`), les couches peuvent travailler sur des images successives
+  (débit = couche la plus lente, conv2 ≈ 64 % de la latence). Ce recouvrement **double la mémoire des canaux** (environ +6 BRAM18).
+- **Limite à connaître pour la suite** : les mémoires partagées (canaux) n'acceptent ni `BLOCK_SIZE` ni `INTERLEAVE` (seulement
+  `WORD_WIDTH`) d'après le manuel v10.4b. Pour dérouler conv2, il faudra le double port (E-03), le regroupement de mots
+  (`WORD_WIDTH`) ou une copie locale découpée en bancs. À revérifier dans la documentation 2024.2.
+
+### E-02 🟡 Petits tableaux en registres
+- **Fait** : `-MEM_MAP_THRESHOLD 256` (variable `REG_ARRAY_MAX`) : tout tableau de moins de 256 éléments va en registres.
+  Concerne bia1 (64), bia2 (32), bia3 (20), fcb (10), pool3_chan (180) et les accumulateurs du perceptron.
+  Dans cnn.v1, chaque petite ROM de biais coûtait 1 BRAM18. Doit rester < `REGISTER_THRESHOLD` (256).
+
+### E-03 🟡 RAM double port
+- **Fait** : `image2`, `image4`, `image6` (sorties des conv) et les canaux `pool1_chan`, `pool2_chan` sont mappés sur
+  `Xilinx_RAMS.BLOCK_DPRAM_RBW` (deux ports lecture/écriture, même nombre de BRAM18 tant que la largeur est ≤ 18 bits).
+  Variable `DUAL_PORT` (0 = retour au 1R1W par défaut).
+- **Sans pipeline, le gain en latence est quasi nul** : un MAC séquentiel ne fait qu'un accès par cycle. Le double port prépare
+  II = 1 (lecture + écriture dans la même itération, ReLU en place) et un déroulage ×2.
+- Non traités : l'entrée `image` (interface du top, à décider avec la plateforme Vivado) et les ROM (`ker*`, `fck`).
 
 ---
 

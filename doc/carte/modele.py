@@ -59,6 +59,7 @@ ROLES = {
     "hls/tb_hls.cpp":          "Testbench SCVerify : N images, compare aux scores de réf.",
     "hls/gen_coeffs.py":       "data/coef → ROM C++ (double et entières quantifiées)",
     "hls/stub/mc_scverify.h":  "Faux mc_scverify.h pour compiler tb_hls sur PC",
+    "hls/stub/ac_channel.h":   "ac_channel minimal (FIFO) pour compiler cnn.cpp sur PC",
     "hls/bash_mentor_24":      "Environnement école : Catapult, Questa, Precision, licences",
     "hls/demoFir.tcl":         "Script de la démo FIR de l'encadrant",
     "hls/AUDIT_HLS.md":        "Audit du passage à Catapult : A, B, C, D + résultats",

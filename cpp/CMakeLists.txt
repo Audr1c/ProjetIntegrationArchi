@@ -22,6 +22,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #   cmake -DCMAKE_CXX_FLAGS="-DKS=3" ..
 # AC datatypes : #include <ac_fixed.h> -> copie hls/include/ (sous Catapult : celle de l'outil)
 include_directories(${CMAKE_SOURCE_DIR}/../hls/include)
+# ac_channel.h minimal (le vrai vient de Catapult) ; APRÈS hls/include, qui a priorité s'il contient le vrai
+include_directories(${CMAKE_SOURCE_DIR}/../hls/stub)
 
 add_executable(main ./main.cpp ./cnn.cpp ./read_image.cpp)
 

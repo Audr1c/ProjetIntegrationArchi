@@ -41,6 +41,23 @@ set CLOCK_NS 10.0           ;# 100 MHz
 # a utiliser seulement si Catapult refuse les ROM de RomWord.
 set ROM_FLAGS ""
 
+# ---------------- Architecture sans pipeline ni deroulage (AUDIT_HLS E-01 a E-03) ----------------
+# Hierarchie : un bloc Catapult par couche (#pragma hls_design dans cpp/cnn.cpp), top en premier.
+# Chaque bloc a son propre multiplieur : plus de multiplexeurs de partage sur le chemin critique.
+set BLOCKS {cnn layer1 layer2 layer3 dense}
+# Tableaux de MOINS de REG_ARRAY_MAX elements -> registres au lieu d'une RAM/ROM (MEM_MAP_THRESHOLD) :
+# biais bia1 (64), bia2 (32), bia3 (20), fcb (10), pool3_chan (180), accumulateurs du perceptron.
+# Restent en memoire : image (1728), image2 (36864), pool1_chan (9216), image4 (4608), pool2_chan (1152),
+# image6 (720), ker1/ker2/ker3, fck (1800). Doit rester < REGISTER_THRESHOLD (256 par defaut).
+set REG_ARRAY_MAX 256
+# 1 = feature maps en RAM double port Xilinx (BLOCK_DPRAM_RBW : 2 acces par cycle, meme nombre de BRAM),
+# 0 = RAM 1R1W par defaut. Sans pipeline, la latence ne change presque pas : prepare II=1 / deroulage x2.
+set DUAL_PORT 1
+set DP_RAM Xilinx_RAMS.BLOCK_DPRAM_RBW
+# Canaux entre blocs (pool1_chan, pool2_chan) : 2 = ping-pong (une couche traite l'image n+1 pendant que
+# la suivante traite l'image n ; memoire doublee), 1 = memoire unique (pas de recouvrement).
+set CHAN_STAGES 2
+
 # Cible FPGA : notre carte est un Zybo Z7-20 = XC7Z020-1CLG400C (lu sur la boite le 2026-11-25) :
 # 280 RAMB18, 220 DSP, 53 200 LUT. (Z7-10 = xc7z010clg400-1, non utilise.)
 # Nom de bibliotheque valide le 2026-11-24 ($MGC_HOME/pkgs/ccs_xilinx/mgc_Xilinx-ZYNQ-1_beh.lib).
@@ -88,7 +105,7 @@ directive set -DESIGN_GOAL area
 directive set -SPECULATE true
 directive set -MERGEABLE true
 directive set -REGISTER_THRESHOLD 256
-directive set -MEM_MAP_THRESHOLD 32     ;# tableaux > 32 mots -> memoires (feature maps)
+directive set -MEM_MAP_THRESHOLD $REG_ARRAY_MAX ;# tableaux plus petits -> registres (voir REG_ARRAY_MAX)
 directive set -ROM_THRESHOLD 64         ;# tableaux constants > 64 mots -> ROM (coefficients)
 directive set -UNROLL no
 directive set -IO_MODE super
@@ -102,9 +119,24 @@ directive set -OPT_CONST_MULTS use_library
 directive set -CHARACTERIZE_ROM false
 directive set -PROTOTYPE_ROM true
 
+# Directive sur une ressource dont le chemin exact depend de la hierarchie (non verifie avant la 1re
+# synthese hierarchique) : essaie les chemins candidats dans l'ordre et garde le premier accepte.
+# Aucun accepte : message ATTENTION, le script continue (chercher le nom dans la GUI, Architectural
+# constraints, ou dans messages.txt, puis corriger l'appel ici).
+proc cnn_try {paths args} {
+    foreach p $paths {
+        if {![catch {directive set $p {*}$args}]} {
+            puts "\[cnn\] directive OK : $p $args"
+            return 1
+        }
+    }
+    puts "\[cnn\] ATTENTION directive ignoree, chemin introuvable : $paths $args"
+    return 0
+}
+
 # ---------------- Analyse et compilation C++ ----------------
 go analyze
-directive set -DESIGN_HIERARCHY cnn
+directive set -DESIGN_HIERARCHY $BLOCKS   ;# doit preceder go compile ; remplace les pragmas hls_design
 go compile
 
 # ---------------- Technologie (C-03) ----------------
@@ -118,13 +150,25 @@ solution library add Xilinx_ROMS
 go libraries
 
 directive set -CLOCKS [list clk [list -CLOCK_PERIOD $CLOCK_NS -CLOCK_EDGE rising -CLOCK_HIGH_TIME [expr {$CLOCK_NS / 2}] -CLOCK_OFFSET 0.000000 -CLOCK_UNCERTAINTY 0.0 -RESET_KIND sync -RESET_SYNC_NAME rst -RESET_SYNC_ACTIVE high -RESET_ASYNC_NAME arst_n -RESET_ASYNC_ACTIVE low -ENABLE_NAME {} -ENABLE_ACTIVE high]]
-directive set /cnn -START_FLAG start
-directive set /cnn -READY_FLAG ready
-directive set /cnn -DONE_FLAG done
+cnn_try {/cnn} -START_FLAG start
+cnn_try {/cnn} -READY_FLAG ready
+cnn_try {/cnn} -DONE_FLAG done
 
 # ---------------- Architecture, ordonnancement, RTL ----------------
 go assembly
-# (directives de boucles / memoires ici : partie D de l'audit)
+# Memoires (E-02, E-03). Chemins : bloc = /cnn/<bloc>/core/<tableau>:rsc ; canal du top = /cnn/<canal>:cns
+# (variantes essayees par cnn_try). Directives de boucles (pipeline, deroulage) : partie D, plus tard.
+if {$DUAL_PORT} {
+    foreach {blk arr} {layer1 image2  layer2 image4  layer3 image6} {
+        cnn_try [list /cnn/$blk/core/$arr:rsc /$blk/core/$arr:rsc /cnn/$blk/$arr:rsc] -MAP_TO_MODULE $DP_RAM
+    }
+}
+foreach ch {pool1_chan pool2_chan} {
+    cnn_try [list /cnn/$ch:cns /cnn/$ch:rsc] -STAGE_REPLICATION $CHAN_STAGES
+    if {$DUAL_PORT} {
+        cnn_try [list /cnn/$ch:cns /cnn/$ch:rsc] -MAP_TO_MODULE $DP_RAM
+    }
+}
 go architect
 go allocate
 go extract
@@ -164,7 +208,7 @@ cnn_sim_cmd $TB_IMAGES      ;# commande shell de la simulation RTL
 # ---------------- Exploration des directives (partie D) : a taper dans le shell Catapult ----------------
 # Une nouvelle solution repart d'un etat de la solution active, SANS refaire go analyze (17 min) :
 #     solution new -state assembly                ;# -> cnn.v2, branchee a l'etat assembly de cnn.v1
-#     directive set /cnn/core/<boucle> -PIPELINE_INIT_INTERVAL 1
+#     directive set /cnn/layer2/core/<boucle> -PIPELINE_INIT_INTERVAL 1   ;# boucles nommees : MAC_N, CONV_COL...
 #     go extract
 #     cnn_report                                  ;# rapports + resume.md dans hls/rapports/
 #     cnn_summary                                 ;# tableau comparatif de toutes les solutions

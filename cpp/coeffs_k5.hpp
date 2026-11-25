@@ -2,7 +2,8 @@
  * Coefficients du CNN, noyaux 5x5 : ROM de la fonction top cnn().
  * FICHIER GÉNÉRÉ par hls/gen_coeffs.py depuis data/coef/CNN_coeff_5x5.txt : ne pas modifier à la main.
  *
- * À inclure DANS le corps de cnn() (cpp/cnn.cpp), pas d'include guard.
+ * À inclure DANS le corps d'un bloc de cpp/cnn.cpp, pas d'include guard ; CNN_ROM_LAYER = n
+ * (défini avant l'#include) ne déclare que les ROM de la couche n (1..3 = conv, 4 = perceptron).
  * CNN_ROM_BEGIN / CNN_ROM_END : définies dans cnn.cpp (ROM ac_fixed en synthèse, double sur PC).
  * Valeurs recopiées du fichier texte, converties en ac_fixed dans les formats de config.hpp.
  * Noyaux rangés [C_out][C_in][K][K], perceptron [180][10].
@@ -12,6 +13,8 @@
  */
 
 #ifdef CNN_ROM_BEGIN
+
+#if !defined(CNN_ROM_LAYER) || CNN_ROM_LAYER == 1
 
 CNN_ROM_BEGIN(ker1_t, ker1, K1_SIZE)   // 4800 valeurs
     7.86114633e-01, 1.03407450e-01, -7.48462975e-02, 8.42909157e-01, 6.88746631e-01, 5.68424463e-01, -3.28794867e-01, -6.02687418e-01,
@@ -626,6 +629,10 @@ CNN_ROM_BEGIN(bias1_t, bia1, C1)   // 64 valeurs
     -0.58640903, -2.42255735, -0.33194458, -0.59746248, -1.39142466, -1.92094982, -0.59423685, -0.3323434,
     -0.21631014, -1.10300899, -0.99288857, -3.37885547, -1.79579365, -0.47253317, -0.30705526, -1.35682487,
 CNN_ROM_END(bias1_t, bia1, C1)
+
+#endif // CNN_ROM_LAYER
+
+#if !defined(CNN_ROM_LAYER) || CNN_ROM_LAYER == 2
 
 CNN_ROM_BEGIN(ker2_t, ker2, K2_SIZE)   // 51200 valeurs
     9.35113151e-03, 1.70286983e-01, 4.95408960e-02, -7.47309700e-02, 1.87212065e-01, -1.78187136e-02, -1.56448081e-01, -2.47085821e-02,
@@ -7037,6 +7044,10 @@ CNN_ROM_BEGIN(bias2_t, bia2, C2)   // 32 valeurs
     0.78628695, 0.95675087, -1.56730294, 0.38784015, 0.02010091, 0.72785425, 2.33488703, -1.00181317,
 CNN_ROM_END(bias2_t, bia2, C2)
 
+#endif // CNN_ROM_LAYER
+
+#if !defined(CNN_ROM_LAYER) || CNN_ROM_LAYER == 3
+
 CNN_ROM_BEGIN(ker3_t, ker3, K3_SIZE)   // 16000 valeurs
     -5.38478233e-02, -2.71844923e-01, 2.46914372e-01, 2.14361995e-01, -2.60090739e-01, 3.41134779e-02, -3.34596872e-01, -4.15364206e-01,
     -2.06794664e-01, 3.47593069e-01, 6.49377629e-02, 4.28340025e-02, 1.53818205e-01, -5.12001151e-03, 3.15248698e-01, 1.05670199e-01,
@@ -9046,6 +9057,10 @@ CNN_ROM_BEGIN(bias3_t, bia3, C3)   // 20 valeurs
     0.85838199, 0.9337588, 1.56765187, -0.8133918,
 CNN_ROM_END(bias3_t, bia3, C3)
 
+#endif // CNN_ROM_LAYER
+
+#if !defined(CNN_ROM_LAYER) || CNN_ROM_LAYER == 4
+
 CNN_ROM_BEGIN(fck_t, fck, FCK_SIZE)   // 1800 valeurs
     7.12834951e-03, -1.26871821e-02, 7.15327589e-03, -5.66092087e-03, 2.17440967e-02, 2.77764015e-02, -3.95245142e-02, 1.03912510e-01,
     -5.08716516e-02, -1.68601200e-02, 8.31402745e-03, 4.86927573e-03, -4.46954407e-02, -3.14741321e-02, -2.27962583e-02, -3.82551663e-02,
@@ -9278,5 +9293,7 @@ CNN_ROM_BEGIN(fcb_t, fcb, N_CLASSES)   // 10 valeurs
     2.101336, 0.51309079, 1.942945, 2.74007154, 1.40490627, 2.12871504, 1.54282224, 1.73720407,
     1.11389065, 1.02819157,
 CNN_ROM_END(fcb_t, fcb, N_CLASSES)
+
+#endif // CNN_ROM_LAYER
 
 #endif // CNN_ROM_BEGIN

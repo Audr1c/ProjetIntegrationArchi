@@ -17,4 +17,5 @@ CXX = os.environ.get("CXX", "g++")
 CXXFLAGS = ["-std=c++17", "-O2"]
 # AC datatypes (cpp/ fait #include <ac_fixed.h>) ; hors de CXXFLAGS, qui entre dans le hash du cache :
 # le chemin absolu dépend de la machine
-INCLUDES = ["-I", str(ROOT / "hls" / "include")]
+# hls/stub : ac_channel.h minimal (cpp/cnn.cpp relie ses blocs par des ac_channel), après hls/include
+INCLUDES = ["-I", str(ROOT / "hls" / "include"), "-I", str(ROOT / "hls" / "stub")]

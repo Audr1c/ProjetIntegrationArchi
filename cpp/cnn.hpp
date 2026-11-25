@@ -47,6 +47,7 @@
  *              sont faits hors du matériel (testbench / ARM), voir hls/AUDIT_HLS.md B-07
  *     scores : scores des 10 classes (sortie)
  * Les coefficients sont des ROM internes (coeffs_k3.hpp / coeffs_k5.hpp, générés par hls/gen_coeffs.py).
+ * Structure : 4 blocs hiérarchiques layer1, layer2, layer3, dense reliés par des ac_channel (cnn.cpp).
  */
 void cnn(
     const input_t image[IN_SIZE],

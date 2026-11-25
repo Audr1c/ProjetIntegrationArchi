@@ -14,8 +14,11 @@ d'entiers natifs (RomWord, voir cpp/utils.hpp) se compile ~20x plus vite (mesure
 Usage (depuis la racine du dépôt) :
     .venv/bin/python hls/gen_coeffs.py
 
-Chaque en-tête déclare des tableaux `static const` à inclure DANS le corps de cnn() (cpp/cnn.cpp) :
+Chaque en-tête déclare des tableaux `static const` à inclure DANS le corps d'une fonction (cpp/cnn.cpp) :
 Catapult les implémente en ROM, et le manuel déconseille les variables globales (§6.1.2).
+Les ROM de chaque couche sont encadrées par #if !defined(CNN_ROM_LAYER) || CNN_ROM_LAYER == n
+(n = 1, 2, 3 pour conv1..3, 4 pour le perceptron) : chaque bloc hiérarchique (layer1..3, dense) définit
+CNN_ROM_LAYER avant l'#include et ne déclare que SES coefficients ; sans CNN_ROM_LAYER, tout est déclaré.
 Les tableaux sont encadrés par les macros CNN_ROM_BEGIN / CNN_ROM_END définies dans cnn.cpp :
     synthèse (__SYNTHESIS__) : static const <type ac_fixed> nom[taille] = { ... };  -> ROM
     PC                       : static const double nom_d[taille] = { ... }; converti une fois au
@@ -57,6 +60,17 @@ LAYERS = [
     ("local3/weights", "fck",  "fck_t",   "FCK_SIZE",  "FCK"),
     ("local3/biases",  "fcb",  "fcb_t",   "N_CLASSES", "FCB"),
 ]
+# Bloc hiérarchique (cpp/cnn.cpp) qui utilise chaque ROM : valeur de CNN_ROM_LAYER
+ROM_LAYER = {"ker1": 1, "bia1": 1, "ker2": 2, "bia2": 2, "ker3": 3, "bia3": 3, "fck": 4, "fcb": 4}
+
+
+def layer_guard(prev, cname):
+    """Lignes à insérer avant la ROM cname : ferme le #if de la couche précédente, ouvre le sien."""
+    n = ROM_LAYER[cname]
+    if n == prev:
+        return []
+    lines = ["#endif // CNN_ROM_LAYER", ""] if prev is not None else []
+    return lines + [f"#if !defined(CNN_ROM_LAYER) || CNN_ROM_LAYER == {n}", ""]
 
 
 def read_formats(path):
@@ -108,7 +122,8 @@ def generate(k):
         f" * Coefficients du CNN, noyaux {k}x{k} : ROM de la fonction top cnn().",
         f" * FICHIER GÉNÉRÉ par hls/gen_coeffs.py depuis {src} : ne pas modifier à la main.",
         " *",
-        " * À inclure DANS le corps de cnn() (cpp/cnn.cpp), pas d'include guard.",
+        " * À inclure DANS le corps d'un bloc de cpp/cnn.cpp, pas d'include guard ; CNN_ROM_LAYER = n",
+        " * (défini avant l'#include) ne déclare que les ROM de la couche n (1..3 = conv, 4 = perceptron).",
         " * CNN_ROM_BEGIN / CNN_ROM_END : définies dans cnn.cpp (ROM ac_fixed en synthèse, double sur PC).",
         " * Valeurs recopiées du fichier texte, converties en ac_fixed dans les formats de config.hpp.",
         " * Noyaux rangés [C_out][C_in][K][K], perceptron [180][10].",
@@ -120,7 +135,10 @@ def generate(k):
         "#ifdef CNN_ROM_BEGIN",
         "",
     ]
+    prev = None
     for tname, cname, ctype, csize, _ in LAYERS:
+        out += layer_guard(prev, cname)
+        prev = ROM_LAYER[cname]
         t = tensors[tname]
         if t.ndim == 4:
             if t.shape[0] != k or t.shape[1] != k:
@@ -128,7 +146,7 @@ def generate(k):
             t = t.transpose(3, 2, 0, 1)          # (M, N, L, C) -> (C, L, M, N)
         out += [c_array(ctype, cname, csize, list(t.reshape(-1))), ""]
         flat[cname] = list(t.reshape(-1))
-    out += ["#endif // CNN_ROM_BEGIN", ""]
+    out += ["#endif // CNN_ROM_LAYER", "", "#endif // CNN_ROM_BEGIN", ""]
     dst = os.path.join(ROOT, "cpp", f"coeffs_k{k}.hpp")
     with open(dst, "w") as f:
         f.write("\n".join(out))
@@ -148,7 +166,8 @@ def generate_raw(k, src, flat):
         f" * FICHIER GÉNÉRÉ par hls/gen_coeffs.py depuis {src} et cpp/config.hpp : ne pas modifier à la main.",
         f" * Formats <W,I> : {fmt_txt}",
         " * Chaque entier = motif binaire de ac_fixed<W, I, true>(x) (AC_TRN, AC_WRAP), lu par rom_value().",
-        " * Même rangement que coeffs_k*.hpp. À inclure DANS le corps de cnn() (cpp/cnn.cpp).",
+        " * Même rangement que coeffs_k*.hpp. À inclure DANS le corps d'un bloc de cpp/cnn.cpp ;",
+        " * CNN_ROM_LAYER = n (défini avant l'#include) ne déclare que les ROM de la couche n.",
         " */",
         "",
         "#ifdef CNN_ROM_RAW",
@@ -158,14 +177,17 @@ def generate_raw(k, src, flat):
         "#endif",
         "",
     ]
+    prev = None
     for _, cname, ctype, csize, prefix in LAYERS:
+        out += layer_guard(prev, cname)
+        prev = ROM_LAYER[cname]
         w, i = formats[prefix]
         vals = [raw_value(v, w, i) for v in flat[cname]]
         out.append(f"static const RomWord<{ctype}> {cname}[{csize}] = {{   // {len(vals)} valeurs, ac_fixed<{w},{i}>")
         for j in range(0, len(vals), 16):
             out.append("    " + " ".join(f"{{{v}}}," for v in vals[j:j + 16]))
         out += ["};", ""]
-    out += ["#endif // CNN_ROM_RAW", ""]
+    out += ["#endif // CNN_ROM_LAYER", "", "#endif // CNN_ROM_RAW", ""]
     dst = os.path.join(ROOT, "cpp", name)
     with open(dst, "w") as f:
         f.write("\n".join(out))

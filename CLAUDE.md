@@ -19,7 +19,7 @@ commentaire de fin de ligne compris. Les commentaires du C++ et des .py gardent 
 | 1. Référence Python | `python/` : CNN boucles + version numpy vectorisée, lecture CIFAR/coefs, mesure de dynamique | ✅ fini |
 | 2a. C++ virgule fixe | `cpp/` : même réseau en `ac_fixed<W,I,S>`, formats dans `cpp/config.hpp` | ✅ fini, ~89 % sur 200 img |
 | 2b. Exploration des formats | `Exploration/` : recherche auto du nb de bits minimal par format | ✅ 12 runs complets (+2 anciens), **non commité** (`?? Exploration/`) |
-| 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A-01…D-08, C-10…C-12) : A, B, C faits ; 1er `go extract` OK à l'école le 2026-11-24 (latence 46,1 M cycles, ~130 RAMB18) | 🔄 SCVerify à refaire (C-10 corrigé), puis D |
+| 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A…E) : A, B, C faits ; 1er `go extract` OK le 2026-11-24 (46,1 M cycles, ~130 RAMB18, slack −2,59 ns). Le 2026-11-25 : boucles nommées (D-07), config **s5949** appliquée (D-01), hiérarchie 4 blocs + registres + RAM double port (E-01…E-03, **pas encore synthétisés**) | 🔄 synthèse à l'école, puis pipeline/déroulage + script d'exploration HLS |
 | 3. FPGA Vivado / Zybo Z7 | `fpga/` vide | ⏳ pas commencé |
 | Rapport | `rapport/` vide | ⏳ pas commencé |
 
@@ -60,7 +60,8 @@ python/            référence algorithmique (UNIQUEMENT des .py, vérifié par 
 cpp/               modèle C++ virgule fixe ; partie synthétisable (cnn.cpp, utils.*, coeffs_k*.hpp) + testbench PC
   config.hpp       TOUS les formats : macros X_W / X_I (#ifndef → surchargeables par -D) + typedefs (regénéré par explore.py)
   utils.hpp/.cpp   templates sur tableaux C fixes : relu, convolution_feature, m_acc_hwc (perceptron), max_pool 3x3/2
-  cnn.hpp/.cpp     KS (taille noyau, -DKS=3) + dimensions ; top Catapult cnn(input_t image[1728], out_t scores[10])
+  cnn.hpp/.cpp     KS (taille noyau, -DKS=3) + dimensions ; top Catapult cnn(input_t image[1728], out_t scores[10]) =
+                   4 blocs hls_design layer1/layer2/layer3/dense reliés par ac_channel<fm_chan> (pool1_chan…pool3_chan)
   coeffs_k3/k5.hpp ROM des coefficients (nombres du fichier, en double), GÉNÉRÉES par hls/gen_coeffs.py, incluses DANS cnn()
   coeffs_k*_raw.hpp mêmes ROM DÉJÀ QUANTIFIÉES dans les formats de config.hpp (RomWord<T> = entier natif) : synthèse
                    (CNN_ROM_RAW, défaut sous __SYNTHESIS__) ; #error si config.hpp a changé depuis → make coeffs
@@ -98,7 +99,8 @@ hls/catapult_report.py  lit rtl.rpt / cycle.rpt / sim.log → tableau Markdown/J
                    SCVerify) ; --save hls/rapports copie les rapports bruts (Python standard, tourne à l'école)
 hls/rapports/      rapports Catapult sauvegardés par solution (<sol>_<date>/ : rtl.rpt, cycle.rpt, logs, resume.md), versionnés
 hls/tb_hls.cpp     testbench SCVerify (CCS_MAIN/CCS_DESIGN) : N images, compare à hls/ref/ ; env CNN_ROOT, CNN_TB_N
-hls/stub/          faux mc_scverify.h pour compiler tb_hls sur PC (jamais dans le chemin d'include de Catapult)
+hls/stub/          faux mc_scverify.h et ac_channel.h minimal pour compiler sur PC (jamais dans le chemin d'include de
+                   Catapult ; -I après hls/include dans CMake et Exploration/explo/paths.py)
 hls/ref/           scores exacts de 200 images (config large, k=3/5) : référence de make nonreg et du testbench ;
                    images_200.bin = 200 premières images de data_batch_1 (versionnées : le testbench ne dépend pas de data/)
 hls/Demo_FIR/      démo Catapult de l'encadrant (FIR) ; hls/demoFir.tcl : script de la démo
@@ -153,7 +155,8 @@ on peut lancer depuis n'importe quel dossier.
   `FCK FCB ACCFC OUT`. Chacun a `<NOM>_W` et `<NOM>_I`. Les `POOLx` sont **non signés** (après ReLU), le reste signé.
 - Accumulateurs `ACCx_W = 0` ⇒ format automatique sans perte (produit exact + 11 bits de garde pour les
   convs, 8 pour le FC) calculé dans `utils.cpp`. Une seule quantification par sortie de couche.
-- `config.hpp` actuel = config **large 16 bits** (tout W=16) : point de départ, pas la config optimisée.
+- `config.hpp` actuel = config **s5949** (10,83 bits, appliquée le 2026-11-25 ; référence `hls/ref/scores_k5.txt` regénérée).
+  L'ancienne config large 16 bits est dans git (commit 52e4185) ; `hls/ref/scores_k3.txt` est encore celle de la config large.
   Les configs optimisées sont dans `Exploration/runs/<run>/config.hpp` ; `explore.py select <run> --apply`
   remplace `cpp/config.hpp`.
 - Dynamique mesurée en float : `Results/amplitude_5x5_pool5_tf_same_10img.md` (attention : mesurée avec pool 5x5).
@@ -172,7 +175,8 @@ on peut lancer depuis n'importe quel dossier.
   `read_image.o`, puis `main N k batch --trace --order order.txt`.
 - **Cache** `runs/cache.jsonl` indexé par sha1(code C++ hors config.hpp, k, n, batch, config) : modifier
   n'importe quel `cpp/*.?pp` (sauf config.hpp et `*_raw.hpp`) invalide tout le cache (hash des runs : `c44f86cd67` ;
-  hash actuel `15066452fd` depuis RomWord/rom_value, 2026-11-25 : code bit-exact, les anciens résultats restent valables).
+  puis `15066452fd` (RomWord/rom_value), hash actuel `7bc3117fc5` depuis les labels de boucles et la hiérarchie
+  (2026-11-25) : code bit-exact, les anciens résultats restent valables).
 - Métrique en abscisse : bits moyens par valeur pondérés par le stockage (`mem`) ou par les lectures (`ops`).
 - Sessions reprenables (Ctrl-C propre, relancer la même commande). Runs ~1 h chacun avec 2 variables en parallèle.
 
@@ -200,6 +204,11 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
   `RomWord` entiers (`coeffs_k*_raw.hpp`, 0,7 s de g++) ; secours `-DCNN_ROM_DOUBLE` (`ROM_FLAGS` dans cnn.tcl) =
   anciens `ac_fixed` initialisés par des double (7,7 s / 1,1 Go de g++, 17 min de go analyze).
   `utils` lit tout coefficient par `rom_value()` (identité pour un ac_fixed, set_slc pour un RomWord).
+- **Hiérarchie Catapult** (`cnn.cpp`) : entre deux blocs, seulement un `static ac_channel<struct à UN tableau>` ; chaque bloc
+  lit et écrit son canal une fois, via une struct locale ; le top ne contient que les canaux et les appels ; chaque bloc
+  est appelé une fois ; les ROM vont dans le bloc qui les lit (`#define CNN_ROM_LAYER n` + `#include CNN_COEFFS`).
+  Nouveau bloc ⇒ l'ajouter aussi à `BLOCKS` dans `hls/cnn.tcl` (`-DESIGN_HIERARCHY` remplace les pragmas).
+  Directives de `cnn.tcl` passées par `cnn_try` (chemins candidats, jamais validés) : vérifier `[cnn] ATTENTION` dans le log.
 - La partie synthétisable (cnn.cpp, utils.*, coeffs) : pas de `std::`, pas d'allocation, dimensions constantes.
   Toute modification doit rester **bit-exacte** (même ordre d'accumulation, quantification avant ReLU) : `make nonreg`.
   Si les formats de config.hpp changent, régénérer la référence (`main 200 5 data_batch_1.bin --dump hls/ref/scores_k5.txt`).
