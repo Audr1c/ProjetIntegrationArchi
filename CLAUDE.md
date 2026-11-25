@@ -135,6 +135,7 @@ make coeffs          # regénère les ROM cpp/coeffs_k*.hpp ET coeffs_k*_raw.hpp
 make hls-report ARGS="hls/rapports"   # résumé des rapports Catapult (= python3 hls/catapult_report.py …)
 make explore-hls ARGS="run --fake"     # exploration des directives, faux Catapult (test, ~1 min)
 make explore-hls ARGS="run"            # vraie exploration (école, après source hls/bash_mentor_24)
+make explore-hls ARGS="run --goal perf --hours 10"   # run long : montée, repli, polissage (voisins), licence attendue
 make venv-ecole                        # école (Python 3.8, sans sudo) : .venv + requirements-ecole.txt, sinon pip --user
 # École : source hls/bash_mentor_24 ; mkdir -p hls/work && cd hls/work && catapult -shell -file ../cnn.tcl
 

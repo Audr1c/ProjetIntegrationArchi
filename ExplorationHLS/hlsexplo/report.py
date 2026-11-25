@@ -11,13 +11,13 @@ from .space import Config, Discovery
 from .store import read_history
 
 
-def write_summary(store, explorer, best, interrupted: bool, t0: float):
+def write_summary(store, explorer, best, interrupted: bool, t0: float, running: bool = False):
     L = explorer.limits
     hist_path = [{"id": e.id, "block": e.block, "move": e.move, "label": e.cfg.label(), "result": e.res,
                   "cost": round(L.cost(e.res), 4)} for e in explorer.path]
     store.write_json("summary.json", {
         "date": time.strftime("%Y-%m-%d %H:%M:%S"), "duration_s": round(time.time() - t0),
-        "interrupted": interrupted, "code": explorer.code,
+        "interrupted": interrupted, "running": running, "code": explorer.code,
         "target_met": bool(best and best.latency and best.latency <= L.target_cycles),
         "reference": hist_path[0] if hist_path else None,
         "best": {"id": best.id, "config": best.cfg.to_json(), "label": best.cfg.label(), "result": best.res,

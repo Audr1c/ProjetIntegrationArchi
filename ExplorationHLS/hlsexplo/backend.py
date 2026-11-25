@@ -40,6 +40,9 @@ import catapult_report  # noqa: E402  (hls/catapult_report.py : Python standard)
 BASE_STAGES = ("analyze", "compile", "libraries", "assembly")
 CAND_STAGES = ("loops", "memories", "cluster", "architect", "allocate", "schedule", "dpfsm", "instance", "extract")
 STAGE_RE = re.compile(r"transformation '(\w+)'|^\s*(?:#\s*)?go (\w+)")
+# Échec de prise de licence (FlexLM) : la synthèse n'a pas eu lieu, la config n'y est pour rien
+LICENSE_RE = re.compile(r"(?i)licen[cs]e\S*.{0,80}(fail|unable|unavailable|not available|denied|checkout|expired)|"
+                        r"(unable to|cannot|could not).{0,40}licen[cs]e|flexlm.{0,40}error")
 
 
 class BackendError(RuntimeError):
@@ -223,7 +226,10 @@ class CatapultBackend:
         sols = sorted((p for p in self.dir.glob("*/cnn.v*/rtl.rpt") if p.stat().st_mtime >= start - 1),
                       key=lambda p: p.stat().st_mtime)
         if not sols:
-            errs = [l.strip() for l in log.read_text(errors="replace").splitlines() if "Error" in l]
+            text = log.read_text(errors="replace")
+            if LICENSE_RE.search(text):            # licence prise par quelqu'un d'autre : réessayer plus tard
+                return {"status": "license", "refused": refused}
+            errs = [l.strip() for l in text.splitlines() if "Error" in l]
             return {"status": "fail", "refused": refused, "error": (errs[-1] if errs else f"code {rc}")[:200]}
         sol = sols[-1].parent
         res = summarize(catapult_report.parse_solution(sol))
@@ -326,9 +332,10 @@ class FakeBackend:
     Durée d'une synthèse : quelques secondes. Les nombres ne valent RIEN pour le vrai matériel."""
     kind = "fake"
 
-    def __init__(self, slot: int, limits, speed: float = 1.0):
+    def __init__(self, slot: int, limits, speed: float = 1.0, license_fail: float = 0.0):
         self.slot = slot
         self.speed = speed
+        self.license_fail = license_fail
         self.truth = Model(limits)
         self.stop = threading.Event()
 
@@ -372,6 +379,8 @@ class FakeBackend:
             return {"status": "ok", "refused": ["layer1 entree en 5 bancs"], "latency": None}
         if rng.random() < 0.04:
             return {"status": "fail", "refused": [], "error": "Error: erreur interne simulée"}
+        if random.random() < self.license_fail:               # licence prise : PAS liée à la config
+            return {"status": "license", "refused": []}
         blocks = {}
         for b in BLOCKS:
             k = cfg.blocks[b]

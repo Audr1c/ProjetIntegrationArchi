@@ -32,7 +32,7 @@ STATUS = {
     "slower": ("yellow", "✗ plus lent"),
     "timing": ("red", "✗ timing"), "budget": ("red", "✗ budget"), "refused": ("magenta", "! directive refusée"),
     "fail": ("red", "✗ échec Catapult"), "timeout": ("red", "✗ délai dépassé"),
-    "interrupted": ("dim", "⊘ interrompu"), "skipped": ("dim", "» inutile (modèle)"), "valid": ("green", "✓"),
+    "interrupted": ("dim", "⊘ interrompu"), "license": ("yellow", "… licence"), "skipped": ("dim", "» inutile (modèle)"), "valid": ("green", "✓"),
 }
 SPARK = "▁▂▃▄▅▆▇█"
 
@@ -138,6 +138,10 @@ class PlainView(BaseView):
 
     def worker_start(self, slot, label):
         self._p(f"w{slot} : {label}")
+
+    def worker_stage(self, slot, stage, i, n):
+        if "licence" in stage:
+            self._p(f"w{slot} : {stage}")
 
     def add_eval(self, ev):
         super().add_eval(ev)
@@ -248,7 +252,9 @@ if HAVE_RICH:
                 f"seuils : latence ≤ [bold]{L.target_cycles / 1e6:.1f} M[/] cycles "
                 f"(≥ {1e9 / (L.target_cycles * i['clock_ns']):.0f} img/s)   BRAM18 ≤ [bold]{L.bram:.0f}[/]   "
                 f"DSP ≤ [bold]{L.dsp:.0f}[/]   LUT ≤ [bold]{fmt_int(L.lut)}[/]   slack ≥ [bold]{L.slack_min:g}[/] ns",
-                f"synthèses : [bold]{n}[/]  ({c['cache']} en cache, [dim]{c['skipped']} écartées par le modèle[/], "
+                f"synthèses : [bold]{n}[/] / {i.get('max_evals', '?')}"
+                + (f"   [bold]reste {fmt_dur(max(0, i['deadline'] - time.time()))}[/]" if i.get("deadline") else "")
+                + f"  ({c['cache']} en cache, [dim]{c['skipped']} écartées par le modèle[/], "
                 f"[red]{c['bad']} échecs[/])   durée moy. {fmt_dur(avg)}   écoulé {fmt_dur(time.time() - self.t0)}",
                 f"[dim]découverte : {self.disc_txt or 'en cours'}[/]",
                 f"[bold yellow]{self.phase_txt}[/]",

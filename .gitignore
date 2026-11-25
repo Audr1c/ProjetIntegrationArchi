@@ -205,4 +205,4 @@ ExplorationHLS/runs_fake/
 !hls/rapports/**
 
 /ExplorationHLS/runs
-/ExplorationHLS/*.gz
+/ExplorationHLS/*.gzExplorationHLS/explo.txt

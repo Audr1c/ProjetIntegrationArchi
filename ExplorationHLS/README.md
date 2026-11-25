@@ -44,6 +44,28 @@ make explore-hls ARGS="run --goal perf"   # le plus rapide possible sous les bud
 - `--plain` donne un affichage texte, une ligne par événement (utile avec `nohup … > explo.txt &`).
 - Sans `rich` ni `matplotlib`, l'outil tourne quand même : affichage texte, pas de graphes.
 
+## Run long (plusieurs heures, sans surveillance)
+
+```bash
+# tmux (si installé) : le run survit à la fermeture du terminal ; Ctrl-b d pour se détacher, tmux attach -t explo
+tmux new -s explo
+make explore-hls ARGS="run --goal perf --hours 10"
+
+# sinon nohup + affichage texte, et suivre le journal
+nohup make explore-hls ARGS="run --goal perf --hours 10 --plain" > ExplorationHLS/explo.txt 2>&1 &
+tail -f ExplorationHLS/explo.txt
+```
+
+- Ordre de grandeur : 2 à 5 minutes par synthèse, donc environ 15 à 25 synthèses par heure avec 1 licence.
+  Par défaut : au plus 300 synthèses (`--max-evals`), 45 minutes au plus par synthèse (`--timeout`).
+- **Phase 4, polissage** (désactivable avec `--no-polish`) : une fois la montée et le repli finis, on synthétise
+  *tous* les voisins à un réglage près de la meilleure config, sans laisser le modèle trancher. Le premier meilleur
+  est retenu et on recommence, jusqu'à ce qu'aucun voisin ne fasse mieux. C'est là que le temps long sert.
+- **Licence prise par quelqu'un d'autre** : la synthèse n'est pas comptée comme ratée. On réessaie chaque minute,
+  puis le run s'arrête proprement au bout de `--license-wait` minutes (30 par défaut).
+- **Sauvegarde à chaque pas retenu** : `summary.json`, `best_directives.tcl` et les graphes sont réécrits. Si la
+  session est coupée (déconnexion, reboot la nuit), relancer la même commande repart du cache sans rien refaire.
+
 ## Méthode (`hlsexplo/search.py`)
 
 1. **Projet de base**, construit une fois par version du code : `hls/cnn.tcl` est sourcé avec
@@ -70,8 +92,9 @@ make explore-hls ARGS="run --goal perf"   # le plus rapide possible sous les bud
    Un candidat qui ne peut pas gagner 2 % est écarté sans synthèse (« inutile (modèle) »). Les autres
    partent en synthèse par ordre de gain/surcoût. Un pas est retenu s'il est valide et gagne au moins
    2 %. Après chaque synthèse, le modèle est recalé sur les vrais chiffres de Catapult.
-4. **Repli**, une fois la cible atteinte : on retire ce qui coûte (×5 → ×2, double port → simple, pipeline,
-   ping-pong), le plus économe d'abord, tant que tous les seuils tiennent.
+4. **Repli**, une fois la cible atteinte : on retire ce qui coûte (×10 → ×5, double port → simple, pipeline,
+   ping-pong), le plus économe d'abord, tant que tous les seuils tiennent (et, en `perf`, la vitesse à 1 % près).
+5. **Polissage** : voir « Run long » ci-dessus.
 
 ## Affichage
 

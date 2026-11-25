@@ -34,7 +34,7 @@ class Limits:
 
     def verdict(self, res: dict) -> str:
         """Statut d'une synthèse, indépendamment de la cible de latence :
-        valid | timing | budget | refused | fail | timeout | interrupted."""
+        valid | timing | budget | refused | fail | timeout | license | interrupted."""
         st = res.get("status")
         if st != "ok":
             return st or "fail"

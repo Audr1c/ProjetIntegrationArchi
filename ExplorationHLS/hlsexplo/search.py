@@ -21,6 +21,10 @@ Deux objectifs (--goal) :
 3. Repli, une fois la cible atteinte : on essaie de retirer ce qui coûte (×10 -> ×5, double port -> simple,
    pipeline retiré, ping-pong -> simple...), le plus économe d'abord, en gardant latence <= cible, tous les
    seuils, et (perf) J à 1 % près. Jusqu'à ce qu'aucun repli ne passe.
+4. Polissage (runs longs, désactivable par --no-polish) : tous les voisins à un réglage près de la config
+   retenue (II ±1, ×2 <-> ×5 <-> ×10, double port, bancs, ReLU/pool, perceptron, ping-pong), sans filtre du
+   modèle ; le premier meilleur est retenu et on recommence, jusqu'à ce qu'aucun voisin ne fasse mieux.
+Arrêts : --max-evals synthèses, --hours, Ctrl-C ; une licence indisponible fait attendre (pas échouer).
 Le chemin suivi (configurations retenues) et chaque évaluation sont enregistrés (store.Store).
 """
 
@@ -41,6 +45,7 @@ from .store import Store, eval_id
 MIN_GAIN = 0.02       # gain prédit minimal (fraction de la latence totale) pour lancer une synthèse
 MIN_IMPROVE = 0.02    # gain mesuré minimal (même échelle) pour retenir un pas de montée
 TRIM_TOL = 0.01       # objectif perf : un repli peut coûter au plus 1 % de latence + débit
+POLISH_TOL = 0.005    # polissage : amélioration minimale de 0,5 % (ou J égal à 0,5 % près et moins cher)
 
 
 @dataclass
@@ -64,8 +69,13 @@ class Eval:
 
 
 class Explorer:
-    def __init__(self, backends: list, limits: Limits, store: Store, view, max_evals: int = 60, goal: str = "cost"):
+    def __init__(self, backends: list, limits: Limits, store: Store, view, max_evals: int = 60, goal: str = "cost",
+                 hours: float | None = None, polish: bool = True, license_wait_min: float = 30.0):
         self.goal = goal                 # cost : config la moins chère sous la cible ; perf : la plus rapide
+        self.deadline = time.time() + hours * 3600 if hours else None
+        self.do_polish = polish
+        self.license_wait_s = license_wait_min * 60
+        self.on_keep = None              # rappel après chaque pas retenu (sauvegarde : summary, Tcl, graphes)
         self.backends = backends
         self.jobs = len(backends)
         self.free = list(range(self.jobs))
@@ -121,8 +131,8 @@ class Explorer:
             res, dur = hit["result"], hit["duration"]
         elif self.stop.is_set():
             res, dur = {"status": "interrupted"}, 0.0
-        elif self.n_synth >= self.max_evals:
-            res, dur = {"status": "fail", "error": f"limite de {self.max_evals} synthèses atteinte"}, 0.0
+        elif self.exhausted():
+            res, dur = {"status": "interrupted", "error": self.exhausted()}, 0.0
         else:
             res, dur = self._synthesize(eid, cfg, f"{space.SHORT.get(block, block)} {move}")
         ev = Eval(eid, cfg, res, self.limits.verdict(res), phase, block, move, cached, dur, predicted or {})
@@ -137,14 +147,29 @@ class Explorer:
         try:
             self.view.worker_start(slot, label)
             dirs = space.directives(cfg, self.disc)
-            try:
-                res = self.backends[slot].evaluate(cfg, dirs, lambda st, i, n: self.view.worker_stage(slot, st, i, n),
-                                                   self.store.eval_dir(eid))
-            except BackendError as e:
-                res = {"status": "interrupted" if self.stop.is_set() else "fail", "error": str(e)[:200]}
-            except BaseException:
-                self.backends[slot].kill()
-                raise
+            waited = 0.0
+            while True:
+                try:
+                    res = self.backends[slot].evaluate(cfg, dirs,
+                                                       lambda st, i, n: self.view.worker_stage(slot, st, i, n),
+                                                       self.store.eval_dir(eid))
+                except BackendError as e:
+                    res = {"status": "interrupted" if self.stop.is_set() else "fail", "error": str(e)[:200]}
+                except BaseException:
+                    self.backends[slot].kill()
+                    raise
+                # pas de licence : ce n'est pas la config qui est en cause -> on attend et on réessaie
+                if res.get("status") != "license" or self.stop.is_set():
+                    break
+                if waited >= self.license_wait_s:
+                    res = {"status": "interrupted", "error": f"licence Catapult indisponible depuis {waited / 60:.0f} min"}
+                    self.view.phase(f"ARRÊT : licence Catapult indisponible depuis {waited / 60:.0f} min")
+                    self.stop.set()
+                    break
+                pause = 60 * getattr(self.backends[slot], "speed", 1.0)     # --fake : accéléré
+                self.view.worker_stage(slot, f"licence indisponible, nouvel essai dans 60 s ({waited / 60:.0f} min)", 0, 1)
+                self.stop.wait(pause)
+                waited += 60
             if self.stop.is_set() and res.get("status") != "ok":
                 res = {"status": "interrupted"}
             dur = time.time() - t0
@@ -181,6 +206,21 @@ class Explorer:
     def keep(self, ev: Eval):
         self.path.append(ev)
         self.view.current(ev, self.path)
+        if self.on_keep:
+            try:
+                self.on_keep()
+            except Exception as e:         # une sauvegarde ratée ne doit pas tuer un run de plusieurs heures
+                self.view.phase(f"(sauvegarde intermédiaire ratée : {e})")
+
+    def exhausted(self) -> str:
+        """Raison d'arrêter de lancer des synthèses ('' si on continue)."""
+        if self.stop.is_set():
+            return "arrêt demandé"
+        if self.n_synth >= self.max_evals:
+            return f"limite de {self.max_evals} synthèses atteinte"
+        if self.deadline and time.time() > self.deadline:
+            return "temps alloué écoulé (--hours)"
+        return ""
 
     def _parallel(self, fns: list) -> list:
         if len(fns) == 1:
@@ -251,7 +291,7 @@ class Explorer:
     def climb(self, cur: Eval) -> Eval:
         L = self.limits
         tried, blocked = set(), set()
-        while self._climbing(cur) and not self.stop.is_set():
+        while self._climbing(cur) and not self.exhausted():
             options = self._climb_options(cur, tried, blocked)
             if not options:
                 self.view.phase("montée : plus aucun changement prometteur")
@@ -347,7 +387,7 @@ class Explorer:
         dégrade pas de plus de TRIM_TOL (on enlève ce qui ne sert pas à la performance)."""
         L = self.limits
         tried = set()
-        while not self.stop.is_set():
+        while not self.exhausted():
             moves = []
             j_cur = self.J(cur)
             for b, desc, cfg2 in trim_moves(cur.cfg):
@@ -394,7 +434,70 @@ class Explorer:
                     else:
                         d = ev.verdict
                     self.record(ev, d)
-                if accepted or self.stop.is_set():
+                if accepted or self.exhausted():
+                    break
+            if not accepted:
+                break
+            cur = accepted
+            self.keep(cur)
+        return cur
+
+    # ============================================================
+    # 4. Polissage (runs longs)
+    # ============================================================
+
+    def better(self, ev: Eval, cur: Eval) -> bool:
+        """ev meilleur que cur, au sens de l'objectif (tous seuils déjà vérifiés par verdict == valid)."""
+        L = self.limits
+        if ev.verdict != "valid" or not ev.latency:
+            return False
+        if cur.latency > L.target_cycles:                       # cible pas encore atteinte : la latence d'abord
+            return ev.latency < cur.latency * (1 - POLISH_TOL)
+        if ev.latency > L.target_cycles:
+            return False
+        if self.goal == "perf":
+            jn, jc = self.J(ev), self.J(cur)
+            return jn < jc * (1 - POLISH_TOL) or (jn <= jc * (1 + POLISH_TOL) and L.cost(ev.res) < L.cost(cur.res) - 0.005)
+        return L.cost(ev.res) < L.cost(cur.res) - 1e-6
+
+    def polish(self, cur: Eval) -> Eval:
+        """Recherche locale exhaustive : TOUS les voisins à un réglage près (space.neighbors), sans filtre du
+        modèle (il ne sert qu'à l'ordre), sauf budget prédit très dépassé et directives déjà refusées.
+        Premier voisin meilleur (lot de `jobs`) -> retenu, et on recommence autour de lui."""
+        seen = {e.cfg for e in self.evals if e.decision != "skipped"}
+        while not self.exhausted():
+            cands = []
+            j_cur = self.J(cur)
+            for b, desc, cfg2 in space.neighbors(cur.cfg):
+                if cfg2 in seen:
+                    continue
+                pred = self._pred(cfg2)
+                k_old, k_new = cur.cfg.blocks.get(b), cfg2.blocks.get(b)
+                bad = {f for f in self.refused.get(b, ()) if k_new is not None and getattr(k_new, f) and
+                       getattr(k_new, f) != getattr(k_old, f)}
+                if bad or pred["bram"] > self.limits.bram * 1.15 or pred["dsp"] > self.limits.dsp * 1.15:
+                    seen.add(cfg2)
+                    self.skip(cfg2, "polissage", b, desc, "directive refusée" if bad else "budget dépassé (prédit)", pred)
+                    continue
+                j_pred = self._pred_J(cur, b, k_new) if b in BLOCKS else j_cur
+                key = (j_pred, pred["cost"]) if self.goal == "perf" else (pred["cost"], j_pred)
+                cands.append((key, b, desc, cfg2, pred))
+            if not cands:
+                break
+            cands.sort(key=lambda c: c[0])
+            accepted = None
+            for i in range(0, len(cands), self.jobs):
+                batch = cands[i: i + self.jobs]
+                self.view.phase(f"polissage : voisins {i + 1}-{i + len(batch)} / {len(cands)} — "
+                                + ", ".join(f"{space.SHORT.get(c[1], c[1])} {c[2]}" for c in batch))
+                evs = self._parallel([lambda c=c: self.evaluate(c[3], "polissage", c[1], c[2], c[4]) for c in batch])
+                for c in batch:
+                    seen.add(c[3])
+                good = [ev for ev in evs if self.better(ev, cur)]
+                accepted = min(good, key=lambda ev: (self.J(ev), self.limits.cost(ev.res))) if good else None
+                for ev in evs:
+                    self.record(ev, "kept" if ev is accepted else ("nogain" if ev.verdict == "valid" else ev.verdict))
+                if accepted or self.exhausted():
                     break
             if not accepted:
                 break
@@ -411,10 +514,14 @@ class Explorer:
         cur = self.reference(chan)
         if self._climbing(cur):
             cur = self.climb(cur)
-        if cur.latency <= self.limits.target_cycles and not self.stop.is_set():
+        if cur.latency <= self.limits.target_cycles and not self.exhausted():
             cur = self.trim(cur)
+        if self.do_polish and not self.exhausted():
+            cur = self.polish(cur)
         met = cur.latency <= self.limits.target_cycles
-        self.view.phase("terminé : " + ("cible atteinte" if met else "cible NON atteinte"))
+        why = self.exhausted()
+        self.view.phase("terminé : " + ("cible atteinte" if met else "cible NON atteinte")
+                        + (f" ({why})" if why and why != "arrêt demandé" else ""))
         return cur
 
     def cheapest(self):

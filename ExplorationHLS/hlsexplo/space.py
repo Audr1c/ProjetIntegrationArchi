@@ -181,6 +181,48 @@ def trim_moves(cfg: Config) -> list:
     return moves
 
 
+PAR_LEVELS = (1, 2, 5, 10)
+
+
+def _par_knobs(k: Knobs, par: int) -> Knobs:
+    """Même bloc avec `par` MAC/cycle et les mémoires qui vont avec (ports suffisants pour l'entrée)."""
+    if par == 1:
+        return replace(k, par=1, xin=False)
+    if par == 2:
+        return replace(k, par=2, dp=True, xin=False)
+    return replace(k, par=par, dp=True, xin=True)
+
+
+def neighbors(cfg: Config) -> list:
+    """Toutes les configs à UN réglage près : [(bloc, description, config)] (polissage)."""
+    out = []
+    for b, k in cfg.blocks.items():
+        cand = []
+        if b == "dense":
+            cand.append(("perceptron séquentiel" if k.pipe else "perceptron pipeliné", replace(k, pipe=not k.pipe, ii=1)))
+        else:
+            cand.append(("ReLU/pool séquentiels" if k.pp else "ReLU + pool pipelinés", replace(k, pp=not k.pp)))
+            if k.pipe:
+                cand.append(("pipeline retiré", replace(k, pipe=False, ii=1, par=1, dp=False, xin=False)))
+                for ii in (k.ii - 1, k.ii + 1):
+                    if 1 <= ii <= 4:
+                        cand.append((f"II{k.ii} → II{ii}", replace(k, ii=ii)))
+            else:
+                cand.append(("MAC pipelinées", replace(k, pipe=True, ii=1)))
+            i = PAR_LEVELS.index(k.par)
+            for j in (i - 1, i + 1):
+                if 0 <= j < len(PAR_LEVELS):
+                    cand.append((f"×{k.par} → ×{PAR_LEVELS[j]}", _par_knobs(k, PAR_LEVELS[j])))
+            cand.append(("RAM simple port" if k.dp else "RAM double port", replace(k, dp=not k.dp)))
+            if k.par >= 2:
+                cand.append(("entrée en 1 banc" if k.xin else f"entrée en bancs", replace(k, xin=not k.xin)))
+        for desc, k2 in cand:
+            if k2 != k:
+                out.append((b, desc, cfg.with_block(b, k2)))
+    out.append(("canaux", "mémoire simple" if cfg.chan == 2 else "ping-pong", cfg.with_chan(3 - cfg.chan)))
+    return out
+
+
 # ============================================================
 # Chemins Catapult découverts sur le projet de base
 # ============================================================

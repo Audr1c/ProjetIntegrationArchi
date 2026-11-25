@@ -15,6 +15,7 @@ Méthode (détail : hlsexplo/search.py)
                        ressource : ReLU/pool pipelinés, MAC pipelinées (II 1 puis 2), 2 MAC/cycle + RAM double
                        port, 5 MAC/cycle. Les barreaux sans gain prévisible sont écartés sans synthèse.
     3. Repli         : cible atteinte, on retire ce qui coûte tant que tous les seuils tiennent.
+    4. Polissage     : tous les voisins à un réglage près, sans filtre du modèle, tant qu'on améliore (runs longs).
     Le modèle (hlsexplo/model.py) est recalé sur chaque synthèse : il classe, Catapult tranche.
 
 Machines de l'école (Python 3.8, sans sudo)
@@ -38,8 +39,11 @@ Options de run [défaut]
     --bram P / --dsp P / --lut P   budget en % du XC7Z020 [60 / 50 / 50]
     --slack NS        slack minimal estimé par Catapult [0]
     --jobs N          synthèses en parallèle (une licence et un projet de base chacune) [1]
-    --timeout MIN     délai maximal d'une synthèse [30] ; --base-timeout MIN pour le projet de base [120]
-    --max-evals N     nombre maximal de synthèses [60]
+    --timeout MIN     délai maximal d'une synthèse [45] ; --base-timeout MIN pour le projet de base [120]
+    --max-evals N     nombre maximal de synthèses [300]
+    --hours H         durée maximale du run (arrêt propre, résultats sauvés) [illimitée]
+    --no-polish       sans la phase 4 (polissage : tous les voisins à un réglage près de la meilleure config)
+    --license-wait M  licence indisponible : on réessaie chaque minute pendant M minutes, puis arrêt propre [30]
     --chan 1|2        canaux entre couches : mémoire simple ou ping-pong [1]
     --keep            garder les dossiers de solution (~100 Mo chacun) au lieu de les effacer
     --plain           affichage texte (sans rich, ou pour un journal)
@@ -69,7 +73,7 @@ from hlsexplo.store import Store, find_run, list_runs            # noqa: E402
 
 def make_backends(args, limits) -> list:
     if args.fake:
-        return [FakeBackend(i, limits, args.speed) for i in range(args.jobs)]
+        return [FakeBackend(i, limits, args.speed, getattr(args, "license_fail", 0.0)) for i in range(args.jobs)]
     CatapultBackend.check_tool()
     return [CatapultBackend(i, args.timeout * 60, args.base_timeout * 60, args.keep) for i in range(args.jobs)]
 
@@ -95,13 +99,21 @@ def cmd_run(args):
         name = f"{base}-{n}"
     store = Store(args.fake, name)
     info = {"run": name, "backend": "faux Catapult (--fake)" if args.fake else "Catapult",
-            "clock_ns": paths.CLOCK_NS, "code": paths.code_hash(), "goal": args.goal}
-    store.write_json("params.json", {**info, "limits": limits.to_json(), "jobs": args.jobs,
-                                     "max_evals": args.max_evals, "chan": args.chan, "argv": sys.argv[1:]})
+            "clock_ns": paths.CLOCK_NS, "code": paths.code_hash(), "goal": args.goal,
+            "max_evals": args.max_evals, "deadline": time.time() + args.hours * 3600 if args.hours else None}
+    store.write_json("params.json", {**info, "limits": limits.to_json(), "jobs": args.jobs, "hours": args.hours,
+                                     "polish": not args.no_polish, "chan": args.chan, "argv": sys.argv[1:]})
     view = make_view(args, info, limits)
-    explorer = Explorer(backends, limits, store, view, args.max_evals, args.goal)
+    explorer = Explorer(backends, limits, store, view, args.max_evals, args.goal, args.hours,
+                        not args.no_polish, args.license_wait)
+    t0 = time.time()
 
-    t0, best, interrupted, error = time.time(), None, False, None
+    def checkpoint():          # après chaque pas retenu : un arrêt brutal (session coupée) ne perd rien
+        report.write_summary(store, explorer, explorer.path[-1], False, t0, running=True)
+        plots.plot_run(store.run)
+    explorer.on_keep = checkpoint
+
+    best, interrupted, error = None, False, None
     live = None
     if hasattr(view, "console"):
         from rich.live import Live
@@ -194,9 +206,14 @@ def main(argv=None):
     r.add_argument("--lut", type=float, default=50.0, help="budget LUT, %% [50]")
     r.add_argument("--slack", type=float, default=0.0, help="slack minimal, ns [0]")
     r.add_argument("--jobs", type=int, default=1, help="synthèses en parallèle (licences) [1]")
-    r.add_argument("--timeout", type=float, default=30.0, help="délai max d'une synthèse, min [30]")
+    r.add_argument("--timeout", type=float, default=45.0, help="délai max d'une synthèse, min [45]")
     r.add_argument("--base-timeout", type=float, default=120.0, help="délai max du projet de base, min [120]")
-    r.add_argument("--max-evals", type=int, default=60, help="synthèses au plus [60]")
+    r.add_argument("--max-evals", type=int, default=300, help="synthèses au plus [300]")
+    r.add_argument("--hours", type=float, help="durée maximale du run, en heures (arrêt propre) [illimitée]")
+    r.add_argument("--no-polish", action="store_true", help="sans la phase de polissage (voisins à un réglage près)")
+    r.add_argument("--license-wait", type=float, default=30.0,
+                   help="attente max d'une licence Catapult avant d'arrêter, min [30]")
+    r.add_argument("--license-fail", type=float, default=0.0, help=argparse.SUPPRESS)   # --fake : taux simulé
     r.add_argument("--chan", type=int, choices=(1, 2), default=1, help="canaux : 1 simple, 2 ping-pong [1]")
     r.add_argument("--keep", action="store_true", help="garder les dossiers de solution")
     r.add_argument("--plain", action="store_true", help="affichage texte")

@@ -50,7 +50,7 @@ class Store:
     def cached(self, eid: str) -> dict | None:
         e = self.cache.get(eid)
         # un échec dû à un arrêt de l'utilisateur ou à un délai dépassé se retente
-        if e and e["result"].get("status") in ("interrupted", "timeout"):
+        if e and e["result"].get("status") in ("interrupted", "timeout", "license"):
             return None
         return e
 
