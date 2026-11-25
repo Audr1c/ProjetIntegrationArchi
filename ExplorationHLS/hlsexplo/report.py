@@ -23,6 +23,9 @@ def write_summary(store, explorer, best, interrupted: bool, t0: float):
         "best": {"id": best.id, "config": best.cfg.to_json(), "label": best.cfg.label(), "result": best.res,
                  "cost": round(L.cost(best.res), 4)} if best else None,
         "path": hist_path,
+        "goal": explorer.goal,
+        "cheapest": ({"id": c.id, "config": c.cfg.to_json(), "label": c.cfg.label(), "result": c.res,
+                      "cost": round(L.cost(c.res), 4)} if (c := explorer.cheapest()) else None),
         "counts": {"synth": explorer.n_synth, "evals": len(explorer.evals),
                    "skipped": sum(e.decision == "skipped" for e in explorer.evals)},
     })
@@ -30,6 +33,9 @@ def write_summary(store, explorer, best, interrupted: bool, t0: float):
         store.write_json("discovery.json", explorer.disc.to_json())
     if best is not None and explorer.disc is not None:
         (store.run / "best_directives.tcl").write_text(best_tcl(best.cfg, explorer.disc, store.run.name, best.res))
+        c = explorer.cheapest()
+        if c is not None and c.cfg != best.cfg:      # objectif perf : on garde aussi la moins chère sous la cible
+            (store.run / "cheapest_directives.tcl").write_text(best_tcl(c.cfg, explorer.disc, store.run.name, c.res))
 
 
 def best_tcl(cfg: Config, disc: Discovery, run_name: str, res: dict) -> str:
@@ -63,7 +69,7 @@ def print_run(run: Path, console=None):
     if console is None:
         try:
             from rich.console import Console
-            console = Console()
+            console = Console(width=max(Console().width, 150))     # journal / nohup : pas de colonnes écrasées
         except ImportError:
             pass
     out = console.print if console else print
@@ -72,24 +78,29 @@ def print_run(run: Path, console=None):
     try:
         from rich.table import Table
         t = Table(title=head, title_justify="left")
-        for c, j in (("pas", "right"), ("bloc", "left"), ("changement", "left"), ("latence", "right"),
+        for c, j in (("pas", "right"), ("bloc", "left"), ("changement", "left"), ("latence", "right"), ("débit", "right"),
                      ("BRAM18", "right"), ("DSP", "right"), ("LUT", "right"), ("slack", "right"), ("coût", "right")):
             t.add_column(c, justify=j)
         for i, h in enumerate(rows):
             r = h["result"]
             t.add_row(str(i), space.SHORT.get(h["block"], h["block"] or "—"), h["move"],
-                      f"{r['latency'] / 1e6:.2f} M", str(r.get("bram")), str(r.get("dsp")), str(r.get("lut")),
+                      f"{r['latency'] / 1e6:.2f} M", f"{(r.get('throughput') or 0) / 1e6:.2f} M", str(r.get("bram")), str(r.get("dsp")), str(r.get("lut")),
                       f"{r['slack']:+.2f}" if r.get("slack") is not None else "—", f"{h['cost']:.3f}")
         out(t)
     except ImportError:
         print(head)
         for i, h in enumerate(rows):
             r = h["result"]
-            print(f"  {i:2d} {h['block'] or '-':7s} {h['move']:36s} {r['latency'] / 1e6:7.2f} M  BRAM {r.get('bram')}"
+            print(f"  {i:2d} {h['block'] or '-':7s} {h['move']:36s} {r['latency'] / 1e6:7.2f} M"
+                  f"  débit {(r.get('throughput') or 0) / 1e6:5.2f} M  BRAM {r.get('bram')}"
                   f"  DSP {r.get('dsp')}  LUT {r.get('lut')}  slack {r.get('slack')}")
     if summ.get("best"):
         b = summ["best"]
         out(f"retenu : {b['label']}  ->  " + ("cible atteinte" if summ.get("target_met") else "cible NON atteinte")
             + ("  (run interrompu)" if summ.get("interrupted") else ""))
+    if summ.get("cheapest") and summ["cheapest"]["id"] != (summ.get("best") or {}).get("id"):
+        c = summ["cheapest"]
+        out(f"la moins chère sous la cible : {c['label']}  ({c['result']['latency'] / 1e6:.2f} M cycles, "
+            f"coût {c['cost']:.3f}) -> cheapest_directives.tcl")
     if (run / "best_directives.tcl").exists():
         out(f"directives : {run / 'best_directives.tcl'}")

@@ -29,6 +29,7 @@ STATUS = {
     "ref": ("cyan", "référence"), "kept": ("bold green", "★ retenu"), "other": ("green", "✓ valide, autre choix"),
     "slow": ("yellow", "✓ gain trop faible"),
     "nogain": ("dim", "✓ pas moins cher"), "target": ("yellow", "✗ latence > cible"),
+    "slower": ("yellow", "✗ plus lent"),
     "timing": ("red", "✗ timing"), "budget": ("red", "✗ budget"), "refused": ("magenta", "! directive refusée"),
     "fail": ("red", "✗ échec Catapult"), "timeout": ("red", "✗ délai dépassé"),
     "interrupted": ("dim", "⊘ interrompu"), "skipped": ("dim", "» inutile (modèle)"), "valid": ("green", "✓"),
@@ -38,6 +39,11 @@ SPARK = "▁▂▃▄▅▆▇█"
 
 def mcyc(c) -> str:
     return "—" if c is None else f"{c / 1e6:.2f} M"
+
+
+def ips(cycles, clock_ns) -> str:
+    """Cycles par image -> images par seconde."""
+    return "—" if not cycles else f"{1e9 / (cycles * clock_ns):.1f} img/s"
 
 
 def fmt_int(v) -> str:
@@ -137,7 +143,7 @@ class PlainView(BaseView):
         super().add_eval(ev)
         r = ev.res
         st = STATUS.get(ev.decision, ("", ev.decision))[1]
-        extra = (f"latence {mcyc(r.get('latency'))}  BRAM {fmt_int(r.get('bram'))}  DSP {fmt_int(r.get('dsp'))}  "
+        extra = (f"latence {mcyc(r.get('latency'))}  débit {mcyc(r.get('throughput'))}  BRAM {fmt_int(r.get('bram'))}  DSP {fmt_int(r.get('dsp'))}  "
                  f"LUT {fmt_int(r.get('lut'))}  slack {r.get('slack')}") if r.get("status") == "ok" else r.get("error", "")
         self._p(f"{SHORT.get(ev.block, ev.block or '-'):>3} {ev.move:<34} {st:<22} {extra}"
                 + ("  (cache)" if ev.cached else ""))
@@ -234,9 +240,11 @@ if HAVE_RICH:
             i, L, c = self.info, self.limits, self.counts
             n = c["synth"]
             avg = c["time"] / n if n else None
+            goal = ("[bold magenta]performance max[/] (latence + débit) sous les budgets" if i.get("goal") == "perf"
+                    else "[bold magenta]coût min[/] sous la cible de latence")
             lines = [
                 f"[bold]{i['run']}[/]   moteur [bold]{i['backend']}[/]   {self.jobs} worker(s)   "
-                f"horloge {i['clock_ns']:.0f} ns   code {i['code']}",
+                f"horloge {i['clock_ns']:.0f} ns   code {i['code']}   objectif : {goal}",
                 f"seuils : latence ≤ [bold]{L.target_cycles / 1e6:.1f} M[/] cycles "
                 f"(≥ {1e9 / (L.target_cycles * i['clock_ns']):.0f} img/s)   BRAM18 ≤ [bold]{L.bram:.0f}[/]   "
                 f"DSP ≤ [bold]{L.dsp:.0f}[/]   LUT ≤ [bold]{fmt_int(L.lut)}[/]   slack ≥ [bold]{L.slack_min:g}[/] ns",
@@ -259,9 +267,13 @@ if HAVE_RICH:
             full_lat = max(ref.latency if ref else 0, L.target_cycles) * 1.02
             lat = r.get("latency")
             g.add_row("latence", self.gauge(lat, full_lat, L.target_cycles), mcyc(lat),
-                      (f"[green]✓[/] ×{ref.latency / lat:.1f} vs réf" if lat and lat <= L.target_cycles
+                      (f"[green]✓[/] ×{ref.latency / lat:.1f} vs réf"
+                       if lat and lat <= L.target_cycles
                        else (f"[red]✗[/] ×{ref.latency / lat:.1f} vs réf" if lat and ref else "")))
             dev = paths.DEVICE
+            thr = r.get("throughput")
+            g.add_row("débit", self.gauge(thr, full_lat, L.target_cycles), mcyc(thr),
+                      f"[cyan]{ips(thr, self.info['clock_ns'])}[/]" if thr else "")
             for key, name, lim, cap in (("bram", "BRAM18", L.bram, dev["BRAM18"]), ("dsp", "DSP", L.dsp, dev["DSP"]),
                                         ("lut", "LUT", L.lut, dev["LUT"])):
                 v = r.get(key)
@@ -292,28 +304,31 @@ if HAVE_RICH:
                 return Panel(t, title="Réglages par bloc", border_style="magenta")
             blocks = ev.res.get("blocks") or {}
             tot = sum(blocks.values()) or 1
+            neck = max(blocks, key=blocks.get) if blocks else None      # bloc le plus lent = débit
             pred = ev.predicted.get("blocks") or {}
             for b in BLOCKS:
                 k = ev.cfg.blocks[b]
                 lat = blocks.get(b)
                 share = (lat or 0) / tot
-                t.add_row(f"[{BLOCK_COLOR[b]}]{b}", f"pipeline II{k.ii}" if k.pipe else "[dim]séquentiel",
-                          str(k.par) if k.par > 1 else "[dim]1", "double port" if k.dp else "[dim]1R1W",
+                ram = ("double port" if k.dp else "1R1W") + (f", entrée {k.in_banks()} bancs" if k.xin else "")
+                t.add_row(f"[{BLOCK_COLOR[b]}]{b}" + (" [bold red]◆" if b == neck else ""),
+                          f"pipeline II{k.ii}" if k.pipe else "[dim]séquentiel",
+                          str(k.par) if k.par > 1 else "[dim]1", ram if (k.dp or k.xin) else "[dim]1R1W",
                           "pipelinés" if k.pp else "[dim]séquentiels", mcyc(lat),
                           f"[bold]{share:.0%}" if share > 0.4 else f"{share:.0%}", mcyc(pred.get(b)))
-            t.caption = ("canaux en ping-pong (couches en parallèle)" if ev.cfg.chan == 2
-                         else "canaux en mémoire simple")
+            t.caption = ("[bold red]◆[/] goulot (fixe le débit) · " +
+                         ("canaux en ping-pong" if ev.cfg.chan == 2 else "canaux en mémoire simple"))
             return Panel(t, title="Réglages par bloc", border_style="magenta")
 
         def recent_table(self):
             t = Table(box=box.SIMPLE_HEAD, expand=True)
             for col, j in (("phase", "left"), ("bloc", "left"), ("changement", "left"), ("latence", "right"),
-                           ("BRAM", "right"), ("DSP", "right"), ("LUT", "right"), ("slack", "right"),
+                           ("débit", "right"), ("BRAM", "right"), ("DSP", "right"), ("LUT", "right"), ("slack", "right"),
                            ("coût", "right"), ("durée", "right"), ("", "left")):
                 t.add_column(col, justify=j)
             for ev in reversed(self.recent):
                 r, p = ev.res, ev.predicted
-                ok = r.get("status") == "ok"
+                ok = r.get("status") == "ok" and r.get("latency") is not None
                 color, txt = STATUS.get(ev.decision, ("white", ev.decision))
                 note = (" [dim](cache)" if ev.cached else "")
                 if not ok and r.get("error"):
@@ -321,7 +336,8 @@ if HAVE_RICH:
                 pre = "" if ok else "[dim]~"     # valeurs prédites par le modèle
                 src = r if ok else p
                 t.add_row(ev.phase, f"[{BLOCK_COLOR.get(ev.block, 'white')}]{SHORT.get(ev.block, ev.block)}",
-                          ev.move, pre + mcyc(src.get("latency")), pre + fmt_int(src.get("bram")),
+                          ev.move, pre + mcyc(src.get("latency")), pre + mcyc(src.get("throughput")),
+                          pre + fmt_int(src.get("bram")),
                           pre + fmt_int(src.get("dsp")), pre + fmt_int(src.get("lut")),
                           f"{r['slack']:+.2f}" if ok and r.get("slack") is not None else "",
                           f"{self.limits.cost(r):.3f}" if ok else (f"[dim]~{p['cost']:.3f}" if p.get("cost") else ""),

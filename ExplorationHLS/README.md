@@ -1,7 +1,13 @@
 # ExplorationHLS : exploration automatique des directives Catapult
 
-Cherche la configuration de directives (pipeline, déroulage, mémoires) **la moins coûteuse en ressources**
-qui respecte tous les seuils. Le code C++ ne change pas : seules les directives varient, et chaque candidat
+Cherche une configuration de directives (pipeline, déroulage, mémoires) selon l'un des deux objectifs (`--goal`) :
+
+- `cost` (défaut) : la configuration **la moins coûteuse** dont la latence tient la cible ;
+- `perf` : la configuration **la plus rapide** (latence + débit) qui tient tous les budgets, débarrassée ensuite
+  de ce qui ne sert pas. Ce run garde aussi la moins chère sous la cible (`cheapest_directives.tcl`).
+
+Le **débit** est le nombre de cycles entre deux images : les quatre blocs travaillent en parallèle sur des
+images successives, donc le débit est fixé par le bloc le plus lent (le « goulot », ◆ dans l'affichage). Le code C++ ne change pas : seules les directives varient, et chaque candidat
 repart du même projet Catapult déjà analysé (pas de `go analyze`).
 
 ## Seuils (`hlsexplo/limits.py`)
@@ -26,6 +32,7 @@ source hls/bash_mentor_24                 # Catapult dans le PATH
 make venv-ecole                           # une seule fois : Python 3.8, sans sudo (requirements-ecole.txt)
 make explore-hls ARGS="run --fake"        # 1 minute, sans licence : pour voir l'outil tourner
 make explore-hls ARGS="run"               # la vraie exploration (1 licence Catapult)
+make explore-hls ARGS="run --goal perf"   # le plus rapide possible sous les budgets
 ```
 
 - Le dépôt doit être cloné dans un chemin **sans espace**.
@@ -51,7 +58,13 @@ make explore-hls ARGS="run"               # la vraie exploration (1 licence Cata
    | ReLU + pool pipelinés | II = 1 sur `RELU` et `POOL_CO` |
    | MAC pipelinées | II = 1 (puis 2) sur `CONV_CO` : Catapult aplatit toutes les boucles internes |
    | 2 MAC/cycle + RAM double port | `MAC_N` déroulée par 2, poids en 2 bancs, cartes en `BLOCK_DPRAM_RBW` |
-   | 5 MAC/cycle | `MAC_N` déroulée complètement, poids en 5 bancs, II = 3 (puis 4) |
+   | 5 MAC/cycle, entrée en 5 bancs | `MAC_N` déroulée, poids et carte d'entrée en 5 bancs, II = 1 (puis 2) |
+   | 10 MAC/cycle | `MAC_N` déroulée + `MAC_CI` ×2, poids en 10 bancs, entrée en 5 bancs double port |
+
+   La carte d'entrée de layer2 et layer3 est la copie locale `x` du canal (`x = in.read()` dans `cnn.cpp`).
+   Un canal n'accepte pas `INTERLEAVE`, mais cette copie l'accepte : 5 pixels consécutifs tombent dans
+   5 bancs différents. Pour layer1, l'entrée est l'interface `image` ; si Catapult refuse de la découper,
+   le refus est mémorisé et le réglage n'est plus reproposé pour ce bloc.
 
    Le modèle analytique (`hlsexplo/model.py`) prédit le gain en cycles et le surcoût de chaque candidat.
    Un candidat qui ne peut pas gagner 2 % est écarté sans synthèse (« inutile (modèle) »). Les autres
@@ -62,7 +75,7 @@ make explore-hls ARGS="run"               # la vraie exploration (1 licence Cata
 
 ## Affichage
 
-- **Configuration retenue vs seuils** : une jauge par grandeur. Le trait `│` marque le seuil ; la barre est
+- **Configuration retenue vs seuils** : une jauge par grandeur (latence, débit en images/s, BRAM, DSP, LUT, slack). Le trait `│` marque le seuil ; la barre est
   verte sous le seuil et rouge au-dessus. Dessous : la latence empilée par bloc et le chemin suivi.
 - **Réglages par bloc** : pipeline, MAC en parallèle, type de RAM, latence mesurée, part du total, prédiction.
 - **Workers Catapult** : l'étape en cours (loops, memories, …, extract) et le temps écoulé.

@@ -29,7 +29,7 @@ import time
 from pathlib import Path
 
 from . import paths
-from .model import Model
+from .model import Model, ii_min
 from .space import BLOCKS, CHANNELS, CONV, INSTANCE_BLOCK, OUT_MAP, ROM_OF, Config, Discovery, ascii, tcl_lines
 
 sys.path.insert(0, str(paths.HLS))
@@ -366,9 +366,10 @@ class FakeBackend:
         # défauts « réalistes » : II impossible, timing, erreurs rares
         for b in CONV:
             k = cfg.blocks[b]
-            ports = 2 if k.dp else 1
-            if k.pipe and k.ii * ports < k.par:
+            if k.pipe and ii_min(k) > k.ii:
                 return {"status": "fail", "refused": [], "error": f"{b} : II={k.ii} impossible (ports mémoire)"}
+        if cfg.blocks["layer1"].xin:          # simulé : l'interface du top ne se découpe pas en bancs
+            return {"status": "ok", "refused": ["layer1 entree en 5 bancs"], "latency": None}
         if rng.random() < 0.04:
             return {"status": "fail", "refused": [], "error": "Error: erreur interne simulée"}
         blocks = {}

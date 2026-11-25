@@ -20,7 +20,7 @@ COLORS = {"layer1": "#17becf", "layer2": "#9467bd", "layer3": "#e6b800", "dense"
 DECISION_STYLE = {   # décision -> (couleur, marqueur, légende)
     "kept": ("#2ca02c", "*", "retenu"), "ref": ("#1f77b4", "D", "référence"),
     "other": ("#98df8a", "o", "valide, autre choix"), "slow": ("#ff7f0e", "o", "valide, gain trop faible"), "nogain": ("#7f7f7f", "o", "valide, pas moins cher"),
-    "target": ("#ff7f0e", "v", "latence > cible"), "timing": ("#d62728", "x", "timing raté"),
+    "target": ("#ff7f0e", "v", "latence > cible"), "slower": ("#ff7f0e", "v", "repli trop lent"), "timing": ("#d62728", "x", "timing raté"),
     "budget": ("#d62728", "s", "budget dépassé"), "refused": ("#e377c2", "P", "directive refusée"),
 }
 
@@ -103,6 +103,8 @@ def plot_evolution(run: Path, hist: list, params: dict) -> Path:
         v = [(h["result"].get("blocks") or {}).get(b, 0) / 1e6 for h in path]
         ax.bar(xs, v, bottom=bottom, color=COLORS[b], label=SHORT[b] + " (" + b + ")", edgecolor="white")
         bottom = [x + y for x, y in zip(bottom, v)]
+    thr = [(h["result"].get("throughput") or 0) / 1e6 for h in path]
+    ax.plot(list(xs), thr, "k_", markersize=40, markeredgewidth=2.5, label="débit (bloc le plus lent)")
     for x, h in zip(xs, path):
         ax.text(x, h["result"]["latency"] / 1e6, f"{h['result']['latency'] / 1e6:.1f} M", ha="center", va="bottom",
                 fontsize=8)

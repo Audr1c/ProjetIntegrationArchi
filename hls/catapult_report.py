@@ -120,12 +120,19 @@ def bram18_estimate(depth: int, width: int) -> int:
 
 
 def parse_memories(lines: list[str]) -> list[dict]:
-    mems, cur = [], None
+    """Mémoires de cycle.rpt (« Memory Resources »), avec :
+    - banks : nombre de bancs si la mémoire est découpée (-INTERLEAVE / -BLOCK_SIZE : section « Splitting ») ;
+      l'estimation BRAM se fait alors banc par banc (chaque banc prend au moins un RAMB18) ;
+    - dup_of : en design hiérarchique, une mémoire partagée (canal du top /cnn/x:cns, interface /cnn/x:rsc)
+      réapparaît comme port de chaque bloc (/cnn/layer1/out:rsc, /cnn/layer2/in:rsc, /cnn/layer1/image:rsc...).
+      Ces vues ne sont pas comptées une deuxième fois (bram18 = 0)."""
+    mems, cur, splitting = [], None, False
     for line in lines:
         m = re.match(r"\s*Resource Name:\s*(\S+)", line)
         if m:
-            cur = {"name": m.group(1)}
+            cur = {"name": m.group(1), "banks": 1}
             mems.append(cur)
+            splitting = False
             continue
         if cur is None:
             continue
@@ -136,10 +143,27 @@ def parse_memories(lines: list[str]) -> list[dict]:
         m = re.match(r"\s*External:\s*(\w+)", line)
         if m:
             cur["external"] = m.group(1) == "true"
+        if re.match(r"\s*Splitting:", line):
+            splitting, cur["banks"] = True, 0
+        elif splitting and re.match(r"\s*\S+:rsc\(\d+\)\(\d+\)", line):
+            cur["banks"] += 1
+    cur_banks = [m for m in mems if m["banks"] == 0]
+    for m in cur_banks:
+        m["banks"] = 1
+    top_sizes = {(m.get("depth"), m.get("width")): m["name"] for m in mems
+                 if re.fullmatch(r"/[^/]+/[^/]+:(rsc|cns)", m["name"])}
     for mem in mems:
         comp = mem.get("component", "").lower()
         is_block = ("block" in comp or "rom" in comp) and "register" not in comp
-        mem["bram18"] = bram18_estimate(mem["depth"], mem["width"]) if is_block and "depth" in mem else 0
+        port = re.fullmatch(r"/[^/]+/[^/]+/[^/]+:rsc", mem["name"]) and ".rom" not in mem["name"]
+        dup = top_sizes.get((mem.get("depth"), mem.get("width"))) if port else None
+        if dup:
+            mem["dup_of"] = dup
+        if is_block and "depth" in mem and not dup:
+            b = mem["banks"]
+            mem["bram18"] = b * bram18_estimate(-(-mem["depth"] // b), mem["width"])
+        else:
+            mem["bram18"] = 0
     return mems
 
 
@@ -321,8 +345,10 @@ def detail(d: dict, top: int) -> str:
         for m in d["memories"]:
             if "depth" not in m:
                 continue
+            note = f"= `{m['dup_of']}`" if m.get("dup_of") else (f"{m['bram18']} ({m['banks']} bancs)" if m.get("banks", 1) > 1
+                                                                 else (m['bram18'] or ''))
             out.append(f"| `{m['name']}` | {m.get('component', '?')} | {m['depth']} × {m['width']} | "
-                       f"{m['depth'] * m['width'] / 1024:.1f} | {'oui' if m.get('external') else 'non'} | {m['bram18'] or ''} |")
+                       f"{m['depth'] * m['width'] / 1024:.1f} | {'oui' if m.get('external') else 'non'} | {note} |")
         tot = d["bram18_total"]
         use = ", ".join(f"{dev} : {tot}/{cap['BRAM18']} ({100 * tot / cap['BRAM18']:.0f} %)"
                         for dev, cap in DEVICES.items())

@@ -8,6 +8,11 @@ par cycle). Après chaque synthèse, il est recalé : facteur mesuré / prédit 
 
 Ordres de grandeur (cnn.v1, aucune directive) : 4 c-steps par itération de MAC_N, + 1 par itération de
 MAC_M -> 4,24 cycles par MAC ; ReLU 3 cycles par valeur ; max-pool 27 cycles par sortie (9 lectures x 3).
+MAC pipelinées (CONV_CO à II, boucles aplaties) : une itération de la boucle aplatie par II cycles, soit
+    sorties x ceil(C_IN / ci) x K x ceil(K / un) x II        (un, ci : déroulages de MAC_N, MAC_CI)
+vérifié à l'école (run 20261125-164257) : layer2 x2 -> 4608 x 64 x 5 x 3 = 4 423 680 (Catapult : 4 423 685).
+Le II réel ne descend pas sous lectures de la carte d'entrée par itération / lectures possibles par cycle.
+Performance (objectif « perf ») : J = latence + débit, débit = bloc le plus lent (les blocs se recouvrent).
 """
 
 from __future__ import annotations
@@ -16,13 +21,27 @@ import math
 import re
 
 from . import paths
-from .space import BLOCKS, CONV, Config, Knobs
+from .space import BLOCKS, CONV, PAR_SPLIT, Config, Knobs
 
 # Calcul du réseau (noyau 5x5)
 MACS = {"layer1": 24 * 24 * 64 * 3 * 25, "layer2": 12 * 12 * 32 * 64 * 25,
         "layer3": 6 * 6 * 20 * 32 * 25, "dense": 180 * 10}
 CONV_OUT = {"layer1": 24 * 24 * 64, "layer2": 12 * 12 * 32, "layer3": 6 * 6 * 20}
 POOL_OUT = {"layer1": 12 * 12 * 64, "layer2": 6 * 6 * 32, "layer3": 3 * 3 * 20}
+C_IN = {"layer1": 3, "layer2": 64, "layer3": 32}
+K = 5
+
+
+def ii_min(k: Knobs) -> int:
+    """II atteignable au mieux : lectures de la carte d'entrée par itération / lectures possibles par cycle."""
+    un, ci = PAR_SPLIT[k.par]
+    return max(k.ii, math.ceil(un * ci / k.in_ports()))
+
+
+def perf(blocks: dict, goal: str) -> float:
+    """Critère à minimiser : latence (objectif cost) ou latence + débit (objectif perf)."""
+    lat = sum(blocks.values())
+    return lat + max(blocks.values()) if goal == "perf" else lat
 
 CYCLES_PER_MAC_SEQ = 4.24
 FILL = 30                           # remplissage d'un pipeline (cycles)
@@ -54,12 +73,12 @@ class Model:
     def raw_block_latency(self, block: str, k: Knobs) -> float:
         if block == "dense":
             return MACS["dense"] * (1 if k.pipe else CYCLES_PER_MAC_SEQ) + FILL
-        ports = 2 if k.dp else 1
         if k.pipe:
-            ii = max(k.ii, math.ceil(k.par / ports))       # lectures de la carte d'entrée par cycle
-            mac = MACS[block] / k.par * ii + FILL
+            un, ci = PAR_SPLIT[k.par]
+            iters = CONV_OUT[block] * math.ceil(C_IN[block] / ci) * K * math.ceil(K / un)
+            mac = iters * ii_min(k) + FILL
         else:
-            mac = MACS[block] * CYCLES_PER_MAC_SEQ / min(k.par, ports)
+            mac = MACS[block] * CYCLES_PER_MAC_SEQ / min(k.par, k.in_ports())
         relu = CONV_OUT[block] * (1 if k.pp else 3)
         pool = POOL_OUT[block] * (9 if k.pp else 27)
         return mac + relu + pool
@@ -67,14 +86,20 @@ class Model:
     def block_latency(self, block: str, k: Knobs) -> float:
         return self.raw_block_latency(block, k) * self.lat_factor.get((block, k.pipe), 1.0)
 
+    def blocks(self, cfg: Config) -> dict:
+        return {b: self.block_latency(b, k) for b, k in cfg.blocks.items()}
+
     def latency(self, cfg: Config) -> float:
-        return sum(self.block_latency(b, k) for b, k in cfg.blocks.items())
+        return sum(self.blocks(cfg).values())
 
     # ---------------- ressources ----------------
     def raw_resources(self, cfg: Config) -> dict:
         w = self.width
         b = cfg.blocks
-        mem = [(1728, w["IN"], 1), (36864, w["CONV1"], 1), (4608, w["CONV2"], 1), (720, w["CONV3"], 1),
+        # cartes (entrée de chaque bloc en in_banks() bancs), copies locales des canaux (pooled, x), ROM
+        mem = [(1728, w["IN"], b["layer1"].in_banks()), (36864, w["CONV1"], 1), (4608, w["CONV2"], 1),
+               (720, w["CONV3"], 1), (9216, w["POOL1"], 1), (9216, w["POOL1"], b["layer2"].in_banks()),
+               (1152, w["POOL2"], 1), (1152, w["POOL2"], b["layer3"].in_banks()),
                (4800, w["K1"], b["layer1"].par), (51200, w["K2"], b["layer2"].par),
                (16000, w["K3"], b["layer3"].par), (1800, w["FCK"], 1)]
         bram = sum(bram18(d, wd, bk) for d, wd, bk in mem)

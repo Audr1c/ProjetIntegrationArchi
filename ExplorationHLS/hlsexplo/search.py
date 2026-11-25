@@ -1,20 +1,26 @@
 """
 Recherche : référence, montée, repli.
 
+Deux objectifs (--goal) :
+    cost  la configuration la MOINS COÛTEUSE dont la latence tient la cible (critère J = latence)
+    perf  la configuration la PLUS RAPIDE qui tient les budgets (critère J = latence + débit, débit = bloc
+          le plus lent, les blocs travaillant en parallèle sur des images successives), puis sans le superflu
+
 1. Référence : aucune directive (projet de base tel quel). Le modèle est recalé dessus.
-2. Montée, tant que la latence dépasse la cible. À chaque pas, pour chaque bloc, le prochain barreau de
-   son échelle (space.LADDER) est un candidat. Le modèle prédit son gain en cycles et son surcoût
-   (fraction de budget) :
-     - gain prédit < 2 % de la latence totale -> écarté sans synthèse (« inutile (modèle) ») ;
+2. Montée, tant que la latence dépasse la cible (cost) ou tant qu'un barreau rapporte (perf). À chaque pas,
+   pour chaque bloc, le prochain barreau de son échelle (space.LADDER) est un candidat. Le modèle prédit
+   son gain sur J et son surcoût (fraction de budget) :
+     - gain prédit < 2 % de J -> écarté sans synthèse (« inutile (modèle) ») ; budget prédit dépassé de
+       plus de 10 % -> écarté aussi ;
      - sinon classé par gain / surcoût. Le meilleur (les `jobs` meilleurs) part en synthèse.
    Un barreau a des variantes (II = 1 puis II = 2...) : la suivante n'est essayée que si Catapult échoue
    ou rate le timing sur la précédente. Retenu : un résultat valide (limits.verdict) qui baisse la
    latence mesurée d'au moins 2 % ; entre plusieurs (--jobs > 1), le meilleur gain mesuré par surcoût
    mesuré, les autres sont reproposés au pas suivant. Budget dépassé sur un bloc ->
    on ne monte plus ce bloc (les barreaux suivants coûtent plus).
-3. Repli, une fois la cible atteinte : on essaie de retirer ce qui coûte (×5 -> ×2, double port -> simple,
-   pipeline retiré, ping-pong -> simple...), le plus économe d'abord, en gardant latence <= cible et
-   tous les seuils. Jusqu'à ce qu'aucun repli ne passe.
+3. Repli, une fois la cible atteinte : on essaie de retirer ce qui coûte (×10 -> ×5, double port -> simple,
+   pipeline retiré, ping-pong -> simple...), le plus économe d'abord, en gardant latence <= cible, tous les
+   seuils, et (perf) J à 1 % près. Jusqu'à ce qu'aucun repli ne passe.
 Le chemin suivi (configurations retenues) et chaque évaluation sont enregistrés (store.Store).
 """
 
@@ -28,12 +34,13 @@ from dataclasses import dataclass, field
 from . import paths, space
 from .backend import BackendError
 from .limits import Limits
-from .model import Model
-from .space import BLOCKS, Config, apply_rung, ladder, rung_done, trim_moves
+from .model import Model, perf
+from .space import BLOCKS, Config, apply_rung, ladder, refused_knobs, rung_done, trim_moves
 from .store import Store, eval_id
 
 MIN_GAIN = 0.02       # gain prédit minimal (fraction de la latence totale) pour lancer une synthèse
 MIN_IMPROVE = 0.02    # gain mesuré minimal (même échelle) pour retenir un pas de montée
+TRIM_TOL = 0.01       # objectif perf : un repli peut coûter au plus 1 % de latence + débit
 
 
 @dataclass
@@ -57,7 +64,8 @@ class Eval:
 
 
 class Explorer:
-    def __init__(self, backends: list, limits: Limits, store: Store, view, max_evals: int = 60):
+    def __init__(self, backends: list, limits: Limits, store: Store, view, max_evals: int = 60, goal: str = "cost"):
+        self.goal = goal                 # cost : config la moins chère sous la cible ; perf : la plus rapide
         self.backends = backends
         self.jobs = len(backends)
         self.free = list(range(self.jobs))
@@ -75,6 +83,7 @@ class Explorer:
         self.evals = []              # toutes les évaluations du run (ordre chronologique)
         self.path = []               # configurations retenues : référence, puis chaque pas
         self.shown_skips = set()
+        self.refused = {}            # bloc -> réglages dont Catapult a refusé une directive
 
     # ============================================================
     # Briques
@@ -194,9 +203,22 @@ class Explorer:
     def _pred(self, cfg: Config) -> dict:
         with self.model_lock:
             r = self.model.resources(cfg)
-            blocks = {b: round(self.model.block_latency(b, k)) for b, k in cfg.blocks.items()}
-            return {"latency": sum(blocks.values()), "blocks": blocks, "cost": round(self.limits.cost(r), 4),
-                    **{k: round(v) for k, v in r.items()}}
+            blocks = {b: round(v) for b, v in self.model.blocks(cfg).items()}
+            return {"latency": sum(blocks.values()), "throughput": max(blocks.values()), "blocks": blocks,
+                    "cost": round(self.limits.cost(r), 4), **{k: round(v) for k, v in r.items()}}
+
+    def J(self, ev: Eval) -> float:
+        """Critère de performance mesuré : latence (objectif cost) ou latence + débit (objectif perf)."""
+        blocks = ev.res.get("blocks")
+        return perf(blocks, self.goal) if blocks else ev.latency
+
+    def _pred_J(self, cur: Eval, block: str, knobs) -> float:
+        """J prédit si seul `block` change : blocs mesurés de cur, celui-là prédit par le modèle."""
+        blocks = dict(cur.res.get("blocks") or {}) or {b: self._block_latency(cur, b) for b in BLOCKS}
+        if block in BLOCKS:
+            with self.model_lock:
+                blocks[block] = self.model.block_latency(block, knobs)
+        return perf(blocks, self.goal)
 
     def _block_latency(self, ev: Eval, block: str) -> float:
         measured = (ev.res.get("blocks") or {}).get(block)
@@ -222,10 +244,14 @@ class Explorer:
     # 2. Montée
     # ============================================================
 
+    def _climbing(self, cur: Eval) -> bool:
+        """Objectif cost : monter jusqu'à la cible. Objectif perf : tant qu'un barreau rapporte (budgets)."""
+        return self.goal == "perf" or cur.latency > self.limits.target_cycles
+
     def climb(self, cur: Eval) -> Eval:
         L = self.limits
         tried, blocked = set(), set()
-        while cur.latency > L.target_cycles and not self.stop.is_set():
+        while self._climbing(cur) and not self.stop.is_set():
             options = self._climb_options(cur, tried, blocked)
             if not options:
                 self.view.phase("montée : plus aucun changement prometteur")
@@ -233,13 +259,14 @@ class Explorer:
             batch = options[: self.jobs]
             self.view.phase("montée : " + ", ".join(f"{space.SHORT[o['block']]} {o['rung'].name}" for o in batch))
             evs = self._parallel([lambda o=o: self._try_rung(cur, o) for o in batch])
+            j_cur = self.J(cur)
 
             def improves(ev):
-                return ev.verdict == "valid" and ev.latency < cur.latency * (1 - MIN_IMPROVE)
+                return ev.verdict == "valid" and self.J(ev) < j_cur * (1 - MIN_IMPROVE)
 
             def score(ev):        # même critère que le classement, sur les valeurs MESURÉES
                 extra = L.cost(ev.res) - L.cost(cur.res)
-                return (cur.latency - ev.latency) / (max(extra, 0.0) + 0.02)
+                return (j_cur - self.J(ev)) / (max(extra, 0.0) + 0.02)
 
             good = [ev for ev in evs if improves(ev)]
             best = max(good, key=score) if good else None
@@ -260,30 +287,40 @@ class Explorer:
 
     def _climb_options(self, cur: Eval, tried: set, blocked: set) -> list:
         options = []
+        j_cur = self.J(cur)
+        what = "latence + débit" if self.goal == "perf" else "latence"
         for b in BLOCKS:
             if b in blocked:
                 continue
             k = cur.cfg.blocks[b]
-            cur_b = self._block_latency(cur, b)
             for rung in ladder(b):
                 if rung_done(k, rung) or (b, rung.name, k) in tried:
                     continue
                 k2 = apply_rung(k, rung, rung.variants[0])
                 cfg2 = cur.cfg.with_block(b, k2)
+                bad = {f for f in self.refused.get(b, ()) if getattr(k2, f) != getattr(k, f)}
+                if bad:
+                    self.skip(cfg2, "montée", b, rung.name,
+                              f"directive déjà refusée par Catapult ({', '.join(sorted(bad))})", self._pred(cfg2))
+                    continue
+                gain = j_cur - self._pred_J(cur, b, k2)
                 with self.model_lock:
-                    gain = cur_b - self.model.block_latency(b, k2)
                     extra = self.model.cost(cfg2) - self.model.cost(cur.cfg)
                 pred = self._pred(cfg2)
-                if gain < MIN_GAIN * cur.latency:
+                if gain < MIN_GAIN * j_cur:
                     self.skip(cfg2, "montée", b, rung.name,
-                              f"gain prédit {gain / 1e6:+.2f} M cycles (< {MIN_GAIN:.0%} de la latence)", pred)
+                              f"gain prédit {gain / 1e6:+.2f} M cycles (< {MIN_GAIN:.0%} de {what})", pred)
+                    continue
+                if pred["bram"] > self.limits.bram * 1.1 or pred["dsp"] > self.limits.dsp * 1.1:
+                    self.skip(cfg2, "montée", b, rung.name, "budget dépassé (prédit)", pred)
                     continue
                 options.append({"block": b, "rung": rung, "key": (b, rung.name, k), "gain": gain,
                                 "score": gain / (max(extra, 0.0) + 0.02)})
         return sorted(options, key=lambda o: -o["score"])
 
     def _try_rung(self, cur: Eval, o: dict) -> Eval:
-        """Variantes du barreau dans l'ordre ; la suivante seulement après un échec ou un timing raté."""
+        """Variantes du barreau dans l'ordre ; la suivante seulement après un échec, un timing raté
+        ou une directive refusée."""
         b, rung = o["block"], o["rung"]
         ev = None
         for i, var in enumerate(rung.variants):
@@ -294,6 +331,9 @@ class Explorer:
             if ev is not None:                       # variante précédente ratée : on la note et on continue
                 self.record(ev, ev.verdict)
             ev = self.evaluate(cfg2, "montée", b, move, self._pred(cfg2))
+            if ev.verdict == "refused":                 # structurel : les autres variantes le seraient aussi
+                self.refused.setdefault(b, set()).update(refused_knobs(ev.res.get("refused") or []))
+                break
             if ev.verdict not in ("fail", "timing"):
                 break
         return ev
@@ -303,22 +343,28 @@ class Explorer:
     # ============================================================
 
     def trim(self, cur: Eval) -> Eval:
+        """Retire ce qui coûte. Objectif cost : tant que latence <= cible. Objectif perf : tant que J ne se
+        dégrade pas de plus de TRIM_TOL (on enlève ce qui ne sert pas à la performance)."""
         L = self.limits
         tried = set()
         while not self.stop.is_set():
             moves = []
+            j_cur = self.J(cur)
             for b, desc, cfg2 in trim_moves(cur.cfg):
                 if cfg2 in tried:
                     continue
                 pred = self._pred(cfg2)
-                if b in BLOCKS:
-                    with self.model_lock:
-                        delta = self.model.block_latency(b, cfg2.blocks[b]) - self.model.block_latency(b, cur.cfg.blocks[b])
+                j_pred = self._pred_J(cur, b, cfg2.blocks.get(b)) if b in BLOCKS else j_cur
+                lat_pred = cur.latency + (pred["blocks"][b] - self._block_latency(cur, b) if b in BLOCKS else 0)
+                if lat_pred > L.target_cycles * 1.05:
+                    why = f"latence prédite {lat_pred / 1e6:.2f} M > cible"
+                elif self.goal == "perf" and j_pred > j_cur * (1 + TRIM_TOL + 0.04):
+                    why = f"perte prédite {100 * (j_pred / j_cur - 1):.0f} % de latence + débit"
                 else:
-                    delta = 0.0
-                if cur.latency + delta > L.target_cycles * 1.05:
+                    why = None
+                if why:
                     tried.add(cfg2)
-                    self.skip(cfg2, "repli", b, desc, f"latence prédite {(cur.latency + delta) / 1e6:.2f} M > cible", pred)
+                    self.skip(cfg2, "repli", b, desc, why, pred)
                     continue
                 with self.model_lock:
                     saving = self.model.cost(cur.cfg) - self.model.cost(cfg2)
@@ -333,14 +379,18 @@ class Explorer:
                 evs = self._parallel([lambda m=m: self.evaluate(m[3], "repli", m[1], m[2], m[4]) for m in batch])
                 for m in batch:
                     tried.add(m[3])
+
+                def keeps_perf(ev):
+                    return self.goal != "perf" or self.J(ev) <= j_cur * (1 + TRIM_TOL)
+
                 ok = [ev for ev in evs if ev.verdict == "valid" and ev.latency <= L.target_cycles
-                      and L.cost(ev.res) < L.cost(cur.res) - 1e-6]
+                      and keeps_perf(ev) and L.cost(ev.res) < L.cost(cur.res) - 1e-6]
                 accepted = min(ok, key=lambda ev: L.cost(ev.res)) if ok else None
                 for ev in evs:
                     if ev is accepted:
                         d = "kept"
                     elif ev.verdict == "valid":
-                        d = "target" if ev.latency > L.target_cycles else "nogain"
+                        d = "target" if ev.latency > L.target_cycles else ("nogain" if keeps_perf(ev) else "slower")
                     else:
                         d = ev.verdict
                     self.record(ev, d)
@@ -359,10 +409,15 @@ class Explorer:
     def run(self, chan: int = 1) -> Eval:
         self.prepare()
         cur = self.reference(chan)
-        if cur.latency > self.limits.target_cycles:
+        if self._climbing(cur):
             cur = self.climb(cur)
         if cur.latency <= self.limits.target_cycles and not self.stop.is_set():
             cur = self.trim(cur)
         met = cur.latency <= self.limits.target_cycles
         self.view.phase("terminé : " + ("cible atteinte" if met else "cible NON atteinte"))
         return cur
+
+    def cheapest(self):
+        """Configuration valide la moins coûteuse sous la cible, parmi toutes celles synthétisées."""
+        ok = [e for e in self.evals if e.verdict == "valid" and e.latency and e.latency <= self.limits.target_cycles]
+        return min(ok, key=lambda e: self.limits.cost(e.res)) if ok else None

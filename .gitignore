@@ -203,3 +203,6 @@ ExplorationHLS/runs_fake/
 !hls/ref/*.bin
 # Rapports Catapult copiés par hls/catapult_report.py --save (rtl.rpt, cycle.rpt, journaux…)
 !hls/rapports/**
+
+/ExplorationHLS/runs
+/ExplorationHLS/*.gz

@@ -20,7 +20,7 @@ commentaire de fin de ligne compris. Les commentaires du C++ et des .py gardent 
 | 2a. C++ virgule fixe | `cpp/` : même réseau en `ac_fixed<W,I,S>`, formats dans `cpp/config.hpp` | ✅ fini, ~89 % sur 200 img |
 | 2b. Exploration des formats | `Exploration/` : recherche auto du nb de bits minimal par format | ✅ 12 runs complets (+2 anciens), **non commité** (`?? Exploration/`) |
 | 2c. HLS Catapult | `hls/AUDIT_HLS.md` (A…E) : A, B, C faits ; 1er `go extract` OK le 2026-11-24 (46,1 M cycles, ~130 RAMB18, slack −2,59 ns). Le 2026-11-25 : boucles nommées (D-07), config **s5949** appliquée (D-01), hiérarchie 4 blocs + registres + RAM double port (E-01…E-03, **pas encore synthétisés**) | 🔄 synthèse à l'école, puis pipeline/déroulage + script d'exploration HLS |
-| 2d. Exploration HLS | `ExplorationHLS/` : recherche auto des directives (pipeline, déroulage, RAM) sous seuils, tableau de bord rich, faux Catapult pour tester ; testé Python 3.8 + maquette de `catapult` | 🔄 **jamais lancé avec le vrai Catapult** (voir son README.md) |
+| 2d. Exploration HLS | `ExplorationHLS/` : recherche auto des directives (pipeline, déroulage, RAM) sous seuils, `--goal cost` (moins cher sous 10 M) ou `perf` (latence + débit min sous budgets), faux Catapult pour tester | 🔄 1er vrai run 2026-11-25 (`runs/20261125-164257`, goal cost) : 46,1 → **9,02 M cycles**, débit 4,48 M (22 img/s), 100 BRAM18, 13 DSP, 5,8 k LUT, slack +0,28 ; `--goal perf` + entrée en bancs à lancer |
 | 3. FPGA Vivado / Zybo Z7 | `fpga/` vide | ⏳ pas commencé |
 | Rapport | `rapport/` vide | ⏳ pas commencé |
 
@@ -237,6 +237,11 @@ Les 12 runs complets du code actuel (`s5947`→`s5958`) finissent entre 10.8 et 
   (`UV_PYTHON_INSTALL_DIR=$TMPDIR/uvpy uv python install 3.8`), venv + `pip==21.1.2` + `requirements-ecole.txt`.
   `requirements.txt` (machine perso) ne doit PAS être modifié pour l'école : c'est `requirements-ecole.txt`.
 - Tcl généré par `ExplorationHLS` (base.tcl, cand.tcl, best_directives.tcl) : ASCII seulement (`space.ascii()`).
+- Chemins Catapult réels (design hiérarchique, relevés le 2026-11-25) : boucle `/cnn/layer2:inst/core/main/CONV_CO/…/MAC_N`
+  (label seul, sans préfixe de fonction), mémoire `/cnn/layer2:inst/core/x.data:rsc`, ROM `/cnn/layer2:inst/ker2.v.rom:rsc`,
+  canal `/cnn/pool1_chan:cns`, interface `/cnn/image:rsc`. `x` (copie locale du canal) et `pooled` existent dans plusieurs
+  blocs : `Discovery.resource(nom, bloc)`. Dans cycle.rpt, un canal réapparaît comme `/cnn/layerN/in|out:rsc` : ne pas
+  compter ses BRAM deux fois (`catapult_report.parse_memories`, `dup_of`) ; bancs d'INTERLEAVE = section « Splitting ».
 - Appeler le venv par un chemin sans `..` (ex. `.venv/bin/python` depuis la racine), sinon warning `sys.prefix`.
 
 ## Pour la suite (phase HLS / FPGA)

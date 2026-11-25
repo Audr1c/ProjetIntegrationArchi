@@ -8,9 +8,13 @@ Réglages d'un bloc de convolution (classe Knobs) :
     pipe  MAC pipelinés : II sur CONV_CO. Catapult aplatit alors toutes les boucles internes
           (manuel, PIPELINE_INIT_INTERVAL, « Nested Loop Pipelining ») : une MAC démarre tous les II cycles
     ii    intervalle d'initiation du pipeline des MAC
-    par   MAC en parallèle : MAC_N déroulée par 2 (par = 2) ou complètement (par = 5) ; la ROM des poids
-          est alors entrelacée en `par` bancs (des poids consécutifs tombent toujours dans des bancs différents)
+    par   MAC en parallèle (PAR_SPLIT) : 2 = MAC_N déroulée par 2 (5 MAC en 3 cycles), 5 = MAC_N déroulée,
+          10 = MAC_N déroulée + MAC_CI par 2. La ROM des poids est entrelacée en `par` bancs : les poids lus
+          ensemble (n consécutifs, canaux d'entrée à 25 d'écart) tombent toujours dans des bancs différents
     dp    RAM double port (Xilinx BLOCK_DPRAM_RBW) pour la carte d'entrée et la carte de sortie du bloc
+    xin   carte d'entrée découpée en bancs (INTERLEAVE 2 ou 5) : layer2/3 lisent la copie LOCALE `x` du canal
+          (x = in.read() dans cnn.cpp ; un canal, lui, n'accepte pas INTERLEAVE), layer1 l'interface `image`.
+          5 pixels consécutifs -> 5 bancs différents : 5 MAC/cycle à II = 1 ; avec dp, 10 lectures/cycle
 Bloc dense : seul `pipe` compte (II = 1 sur FC_ROW).
 Réglage global : chan = STAGE_REPLICATION des canaux pool1_chan et pool2_chan (1 = mémoire simple,
 2 = ping-pong : les couches travaillent sur des images successives, mémoire doublée).
@@ -30,7 +34,8 @@ SHORT = {"layer1": "L1", "layer2": "L2", "layer3": "L3", "dense": "FC"}
 # Tableaux de chaque bloc (noms de cpp/cnn.cpp)
 ROM_OF = {"layer1": "ker1", "layer2": "ker2", "layer3": "ker3"}
 OUT_MAP = {"layer1": "image2", "layer2": "image4", "layer3": "image6"}
-IN_MAP = {"layer1": "image", "layer2": "pool1_chan", "layer3": "pool2_chan"}
+IN_MAP = {"layer1": "image", "layer2": "x", "layer3": "x"}     # carte réellement lue par les MAC
+PAR_SPLIT = {1: (1, 1), 2: (2, 1), 5: (5, 1), 10: (5, 2)}      # par -> (déroulage MAC_N, déroulage MAC_CI)
 CHANNELS = ("pool1_chan", "pool2_chan")
 
 RAM_DP = "Xilinx_RAMS.BLOCK_DPRAM_RBW"
@@ -47,6 +52,15 @@ class Knobs:
     ii: int = 1
     par: int = 1
     dp: bool = False
+    xin: bool = False
+
+    def in_banks(self) -> int:
+        """Bancs de la carte d'entrée (1 si elle n'est pas découpée)."""
+        return (2 if self.par == 2 else 5) if self.xin else 1
+
+    def in_ports(self) -> int:
+        """Lectures de la carte d'entrée possibles par cycle."""
+        return self.in_banks() * (2 if self.dp else 1)
 
     def short(self, block: str) -> str:
         """Résumé lisible : « II1 ×2 DP pp », « — » si rien n'est réglé."""
@@ -59,6 +73,8 @@ class Knobs:
             parts.append(f"×{self.par}")
         if self.dp:
             parts.append("DP")
+        if self.xin:
+            parts.append(f"E{self.in_banks()}")
         if self.pp:
             parts.append("pp")
         return " ".join(parts) or "—"
@@ -118,7 +134,9 @@ LADDER = (
     Rung("ReLU + pool pipelinés", {"pp": True}),
     Rung("MAC pipelinées", {"pipe": True}, ({"ii": 1}, {"ii": 2})),
     Rung("2 MAC/cycle + RAM double port", {"pipe": True, "par": 2, "dp": True}, ({"ii": 1}, {"ii": 2})),
-    Rung("5 MAC/cycle (MAC_N déroulée)", {"pipe": True, "par": 5, "dp": True}, ({"ii": 3}, {"ii": 4})),
+    Rung("5 MAC/cycle, entrée en 5 bancs", {"pipe": True, "par": 5, "dp": True, "xin": True}, ({"ii": 1}, {"ii": 2})),
+    Rung("10 MAC/cycle (MAC_N + MAC_CI/2)", {"pipe": True, "par": 10, "dp": True, "xin": True},
+         ({"ii": 1}, {"ii": 2})),
 )
 DENSE_LADDER = (Rung("perceptron pipeliné", {"pipe": True}, ({"ii": 1},)),)
 
@@ -148,8 +166,9 @@ def trim_moves(cfg: Config) -> list:
     moves = []
     for b, k in cfg.blocks.items():
         if k.par > 1:
-            lower = 2 if k.par == 5 else 1
-            k2 = replace(k, par=lower, dp=k.dp if lower > 1 else False, ii=1 if lower > 1 else k.ii)
+            lower = {10: 5, 5: 2, 2: 1}[k.par]
+            k2 = replace(k, par=lower, dp=k.dp if lower > 1 else False, xin=k.xin and lower >= 5,
+                         ii=1 if lower > 1 else k.ii)
             moves.append((b, f"×{k.par} → ×{lower}", cfg.with_block(b, k2)))
         if k.dp and k.par == 1:
             moves.append((b, "RAM double port → simple", cfg.with_block(b, replace(k, dp=False))))
@@ -184,9 +203,10 @@ class Discovery:
     on la range sous (bloc, label). Le bloc vient du chemin (/layer2/) ou, à défaut, de l'instance.
     """
 
-    def __init__(self, loops: dict | None = None, resources: dict | None = None):
+    def __init__(self, loops: dict | None = None, resources: dict | None = None, resource_paths: list | None = None):
         self.loops = loops or {}          # (bloc, label) -> chemin
-        self.resources = resources or {}  # nom du tableau -> chemin
+        self.resources = resources or {}  # nom du tableau -> premier chemin trouvé
+        self.resource_paths = resource_paths or list(self.resources.values())   # tous (x existe dans 2 blocs)
 
     @staticmethod
     def _entries(text: str, directive: str) -> list:
@@ -219,11 +239,16 @@ class Discovery:
             if block:
                 d.loops.setdefault((block, label), path)
         for path in cls._entries(resources_txt, "MAP_TO_MODULE"):
-            last = path.rsplit("/", 1)[-1]
-            name = last.split(":")[0].split(".")[0]
-            if name:
+            name = cls._res_name(path)
+            if name and path.endswith((":rsc", ":cns")):
                 d.resources.setdefault(name, path)
+                d.resource_paths.append(path)
         return d
+
+    @staticmethod
+    def _res_name(path: str) -> str:
+        """/cnn/layer2:inst/core/x.data:rsc -> x ; /cnn/layer2:inst/ker2.v.rom:rsc -> ker2"""
+        return path.rsplit("/", 1)[-1].split(":")[0].split(".")[0]
 
     @staticmethod
     def _block_of(path: str, inst: str) -> str | None:
@@ -237,23 +262,33 @@ class Discovery:
         return None
 
     def to_json(self) -> dict:
-        return {"loops": {f"{b}:{l}": p for (b, l), p in self.loops.items()}, "resources": self.resources}
+        return {"loops": {f"{b}:{l}": p for (b, l), p in self.loops.items()}, "resources": self.resources,
+                "resource_paths": self.resource_paths}
 
     @staticmethod
     def from_json(d: dict) -> "Discovery":
-        return Discovery({tuple(k.split(":", 1)): p for k, p in d["loops"].items()}, d["resources"])
+        return Discovery({tuple(k.split(":", 1)): p for k, p in d["loops"].items()}, d["resources"],
+                         d.get("resource_paths"))
 
     def loop(self, block: str, label: str) -> list:
         p = self.loops.get((block, label))
         return [p] if p else []
 
     def resource(self, name: str, block: str | None = None) -> list:
-        """Chemin découvert, sinon les chemins probables (essayés dans l'ordre par explo_try)."""
-        if name in self.resources:
-            return [self.resources[name]]
+        """Chemin découvert (celui du bloc demandé si le nom existe dans plusieurs blocs), sinon les chemins
+        probables (essayés dans l'ordre par explo_try)."""
+        hits = [p for p in self.resource_paths if self._res_name(p) == name]
+        if block:
+            mine = [p for p in hits if f"/{block}:" in p or f"/{block}/" in p]
+            hits = mine or [p for p in hits if not re.search(r"/(layer[123]|dense)[:/]", p)]
+        if hits:
+            return hits[:1]
         guesses = [f"/cnn/{name}:cns", f"/cnn/{name}:rsc"]
         if block:
-            guesses = [f"/cnn/{block}/core/{name}:rsc", f"/{block}/core/{name}:rsc",
+            # forme réelle relevée à l'école (2026-11-25) d'abord : /cnn/layer2:inst/core/x.data:rsc
+            guesses = [f"/cnn/{block}:inst/core/{name}:rsc", f"/cnn/{block}:inst/core/{name}.data:rsc",
+                       f"/cnn/{block}:inst/{name}.v.rom:rsc",
+                       f"/cnn/{block}/core/{name}:rsc", f"/{block}/core/{name}:rsc",
                        f"/cnn/{block}/{name}.v.rom:rsc", f"/cnn/{block}/core/{name}.v.rom:rsc"] + guesses
         return guesses
 
@@ -280,15 +315,18 @@ def directives(cfg: Config, disc: Discovery) -> list:
         if k.pipe:
             out.append(Directive(disc.loop(b, "CONV_CO"), f"-PIPELINE_INIT_INTERVAL {k.ii}", f"{b} MAC pipelinées"))
         if k.par > 1:
-            unroll = "yes" if k.par == 5 else str(k.par)
-            out.append(Directive(disc.loop(b, "MAC_N"), f"-UNROLL {unroll}", f"{b} {k.par} MAC/cycle"))
+            un, ci = PAR_SPLIT[k.par]
+            out.append(Directive(disc.loop(b, "MAC_N"), f"-UNROLL {'yes' if un == 5 else un}", f"{b} MAC_N x{un}"))
+            if ci > 1:
+                out.append(Directive(disc.loop(b, "MAC_CI"), f"-UNROLL {ci}", f"{b} MAC_CI x{ci}"))
             out.append(Directive(disc.resource(ROM_OF[b], b), f"-INTERLEAVE {k.par}",
                                  f"{b} poids en {k.par} bancs"))
+        if k.xin:
+            out.append(Directive(disc.resource(IN_MAP[b], b), f"-INTERLEAVE {k.in_banks()}",
+                                 f"{b} entrée en {k.in_banks()} bancs"))
         if k.dp:
             out.append(Directive(disc.resource(OUT_MAP[b], b), f"-MAP_TO_MODULE {RAM_DP}", f"{b} sortie double port"))
-            # l'entrée de layer1 est l'interface du top : on essaie, sans en faire une condition
-            out.append(Directive(disc.resource(IN_MAP[b], b if b == "layer1" else None),
-                                 f"-MAP_TO_MODULE {RAM_DP}", f"{b} entrée double port", essential=(b != "layer1")))
+            out.append(Directive(disc.resource(IN_MAP[b], b), f"-MAP_TO_MODULE {RAM_DP}", f"{b} entrée double port"))
     if cfg.blocks["dense"].pipe:
         out.append(Directive(disc.loop("dense", "FC_ROW"), f"-PIPELINE_INIT_INTERVAL {cfg.blocks['dense'].ii}",
                              "perceptron pipeliné"))
@@ -296,6 +334,16 @@ def directives(cfg: Config, disc: Discovery) -> list:
         out.append(Directive(disc.resource(ch), f"-STAGE_REPLICATION {cfg.chan}", f"{ch} : {cfg.chan} étage(s)",
                              essential=(cfg.chan != 1)))
     return out
+
+
+# Directive refusée par Catapult (texte « what » du journal, en ASCII) -> réglage en cause
+REFUSAL_KNOB = (("entree en", "xin"), ("double port", "dp"), ("MAC_", "par"), ("poids", "par"),
+                ("MAC pipelinees", "pipe"), ("perceptron", "pipe"), ("ReLU", "pp"), ("max-pool", "pp"))
+
+
+def refused_knobs(whats: list) -> set:
+    """Réglages dont une directive a été refusée : inutile de les reproposer (le refus est structurel)."""
+    return {knob for w in whats for key, knob in REFUSAL_KNOB if key in w}
 
 
 def ascii(text: str) -> str:

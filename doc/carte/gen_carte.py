@@ -34,7 +34,7 @@ sys.path.insert(0, str(HERE))
 import modele  # noqa: E402
 
 # Fichiers du dépôt montrés sur la carte (les dossiers volumineux sont des nœuds virtuels de modele.py)
-EXCLUS = [r"^Exploration/runs/", r"^hls/Demo_FIR/", r"^hls/include/", r"^hls/rapports/", r"^doc/img/",
+EXCLUS = [r"^Exploration/runs/", r"^ExplorationHLS/runs", r"^ExplorationHLS/work/", r"^hls/Demo_FIR/", r"^hls/include/", r"^hls/rapports/", r"^doc/img/",
           r"^data/", r"^Results/", r"^hls/work", r"(^|/)\.", r"\.gitkeep$", r"__init__\.py$", r"\.pdf$",
           r"\.zip$", r"\.tgz$", r"^doc/carte/carte\.html$", r"^doc/carte/template\.html$", r"^Makefile$",
           r"^doc/hls/", r"^build/", r"^cpp/build/", r"\.png$"]

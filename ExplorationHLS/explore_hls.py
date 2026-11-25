@@ -95,11 +95,11 @@ def cmd_run(args):
         name = f"{base}-{n}"
     store = Store(args.fake, name)
     info = {"run": name, "backend": "faux Catapult (--fake)" if args.fake else "Catapult",
-            "clock_ns": paths.CLOCK_NS, "code": paths.code_hash()}
+            "clock_ns": paths.CLOCK_NS, "code": paths.code_hash(), "goal": args.goal}
     store.write_json("params.json", {**info, "limits": limits.to_json(), "jobs": args.jobs,
                                      "max_evals": args.max_evals, "chan": args.chan, "argv": sys.argv[1:]})
     view = make_view(args, info, limits)
-    explorer = Explorer(backends, limits, store, view, args.max_evals)
+    explorer = Explorer(backends, limits, store, view, args.max_evals, args.goal)
 
     t0, best, interrupted, error = time.time(), None, False, None
     live = None
@@ -150,8 +150,9 @@ def cmd_list(args):
         s = json.loads((run / "summary.json").read_text()) if (run / "summary.json").exists() else {}
         b = s.get("best") or {}
         lat = (b.get("result") or {}).get("latency")
-        print(f"{run.name:28s} {'cible OK ' if s.get('target_met') else 'cible KO '} "
-              f"{(lat or 0) / 1e6:7.2f} M  coût {b.get('cost', 0):.3f}  {s.get('counts', {}).get('synth', 0):3d} synthèses"
+        thr = (b.get("result") or {}).get("throughput")
+        print(f"{run.name:28s} {s.get('goal', 'cost'):4s} {'cible OK ' if s.get('target_met') else 'cible KO '} "
+              f"{(lat or 0) / 1e6:7.2f} M  débit {(thr or 0) / 1e6:5.2f} M  coût {b.get('cost', 0):.3f}  {s.get('counts', {}).get('synth', 0):3d} synthèses"
               f"  {b.get('label', '')}")
     return 0
 
@@ -185,6 +186,8 @@ def main(argv=None):
     common.add_argument("--fake", action="store_true", help="faux Catapult (test sans licence)")
 
     r = sub.add_parser("run", parents=[common], help="lance une exploration")
+    r.add_argument("--goal", choices=("cost", "perf"), default="cost",
+                   help="cost : la moins chère sous la cible ; perf : la plus rapide (latence + débit) sous les budgets")
     r.add_argument("--target", type=float, default=10.0, help="latence max, millions de cycles [10]")
     r.add_argument("--bram", type=float, default=60.0, help="budget BRAM18, %% du XC7Z020 [60]")
     r.add_argument("--dsp", type=float, default=50.0, help="budget DSP, %% [50]")
