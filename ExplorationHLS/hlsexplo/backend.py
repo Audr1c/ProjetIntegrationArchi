@@ -147,30 +147,58 @@ class CatapultBackend:
 
     # ---------------- projet de base ----------------
     def prepare(self, on_stage) -> Discovery:
+        """Projet de base (construit, ou repris s'il est à jour), puis chemins des boucles et des mémoires."""
         code = paths.code_hash()
         ok = self.dir / "base_ok.json"
-        if ok.exists():
-            base = json.loads(ok.read_text())
-            if base.get("code") == code and Path(base["ccs"]).exists():
-                self.base = base
-                return Discovery.from_json(base["discovery"])
+        base = json.loads(ok.read_text()) if ok.exists() else None
+        if not (base and base.get("code") == code and Path(base["ccs"]).exists()):
+            base = self._adopt_base(code) or self._build_base(code, on_stage)
+        self.base = base
+        disc = self._parse_discovery()
+        if not disc.loops:                      # découverte seule, sans refaire le projet de base
+            (self.dir / "discover.tcl").write_text(DISCOVER_TCL.format(ccs=base["ccs"], dump=DUMP_PROC))
+            on_stage("discover", 1, 1)
+            self._run("discover.tcl", self.timeout_s, ("discover",), on_stage)
+            disc = self._parse_discovery()
+        if not disc.loops:
+            lines = [l for l in _read(self.dir / "loops.txt").splitlines() if l.strip()][:6]
+            raise BackendError("aucune boucle reconnue dans le projet de base (le projet est gardé : corriger puis "
+                               f"relancer ne refait pas go analyze). Début de {self.dir / 'loops.txt'} :\n    "
+                               + ("\n    ".join(l[:160] for l in lines) if lines else "(vide)")
+                               + f"\nJournal : {self.dir / 'discover.log'}")
+        return disc
+
+    def _parse_discovery(self) -> Discovery:
+        return Discovery.parse(_read(self.dir / "loops.txt"), _read(self.dir / "resources.txt"))
+
+    def _build_base(self, code: str, on_stage) -> dict:
         if self.dir.exists():
             shutil.rmtree(str(self.dir))
         self.dir.mkdir(parents=True)
-        (self.dir / "base.tcl").write_text(BASE_TCL.format(cnn_tcl=paths.CNN_TCL))
+        (self.dir / "base.tcl").write_text(BASE_TCL.format(cnn_tcl=paths.CNN_TCL, dump=DUMP_PROC))
         rc, timed_out, log = self._run("base.tcl", self.base_timeout_s, BASE_STAGES, on_stage)
         ccs = sorted(self.dir.glob("*.ccs"))
         if timed_out or not ccs or "EXPLO_BASE_OK" not in log.read_text(errors="replace"):
             raise BackendError(f"projet de base non construit ({'délai dépassé' if timed_out else f'code {rc}'}) : "
                                f"voir {log}")
-        disc = Discovery.parse(_read(self.dir / "loops.txt"), _read(self.dir / "resources.txt"))
-        if not disc.loops:
-            raise BackendError(f"aucune boucle découverte dans le projet de base : voir {self.dir / 'loops.txt'}")
+        return self._save_base(code, ccs[0])
+
+    def _adopt_base(self, code: str) -> dict | None:
+        """Projet de base déjà construit mais jamais validé (ex. découverte ratée avec une ancienne version de
+        l'outil) : repris s'il a abouti et s'il est plus récent que tous les fichiers du code."""
+        log = self.dir / "base.log"
+        ccs = sorted(self.dir.glob("*.ccs"))
+        if not ccs or "EXPLO_BASE_OK" not in _read(log):
+            return None
+        if ccs[0].stat().st_mtime < max(f.stat().st_mtime for f in paths.CODE_FILES):
+            return None
+        return self._save_base(code, ccs[0])
+
+    def _save_base(self, code: str, ccs: Path) -> dict:
         sols = [p.name for p in self._solutions()]
-        self.base = {"code": code, "ccs": str(ccs[0]), "solution": sorted(sols)[0] if sols else "cnn.v1",
-                     "discovery": disc.to_json()}
-        ok.write_text(json.dumps(self.base, indent=1))
-        return disc
+        base = {"code": code, "ccs": str(ccs), "solution": sorted(sols)[0] if sols else "cnn.v1"}
+        (self.dir / "base_ok.json").write_text(json.dumps(base, indent=1))
+        return base
 
     # ---------------- un candidat ----------------
     def _solutions(self):
@@ -222,28 +250,46 @@ def _save_small(out_dir: Path, files, log: Path):
     (out_dir / "catapult_fin.txt").write_text("\n".join(lines[-200:]) + "\n")
 
 
+# Écrit tous les chemins portant une directive : un élément de la liste renvoyée par ligne (forme plate
+# « chemin valeur chemin valeur » ou paires) ; Discovery.parse ne garde que les mots qui commencent par /.
+# Plusieurs motifs, essayés dans l'ordre ; une ligne de commentaire par motif pour le diagnostic.
+DUMP_PROC = """\
+proc explo_dump {file directive} {
+    set f [open $file w]
+    foreach pattern {/.../* /* /cnn/* /cnn/.../* /cnn/*/*/*/*/*/*/*/*/*/*/*/*} {
+        if {[catch {directive get $pattern -match glob -return pathvalue $directive} res]} {
+            puts $f "# ERREUR ($pattern) $res"
+            continue
+        }
+        puts $f "# motif $pattern : [llength $res] elements"
+        if {[llength $res] > 0} {
+            foreach e $res { puts $f $e }
+            break
+        }
+    }
+    close $f
+}"""
+
 BASE_TCL = """\
 # Projet de base de l'exploration HLS (genere par ExplorationHLS, ne pas modifier)
-# hls/cnn.tcl jusqu'a go assembly, puis decouverte des chemins des boucles et des memoires.
+# hls/cnn.tcl jusqu'a go assembly, decouverte des chemins des boucles et des memoires, sauvegarde.
 set ::CNN_STOP_AT assembly
 source {{{cnn_tcl}}}
-# explo_dump : chemins de tous les objets portant la directive (motifs essayes dans l'ordre)
-proc explo_dump {{file directive}} {{
-    set f [open $file w]
-    foreach pattern {{/.../* /cnn/.../* /cnn/*/*/*/*/*/*/*/*/*/*/*/*}} {{
-        if {{[catch {{directive get $pattern -match glob -return pathvalue $directive}} res]}} {{
-            puts $f "# ERREUR ($pattern) $res"
-        }} elseif {{[llength $res] > 0}} {{
-            foreach {{p v}} $res {{ puts $f "$p\\t$v" }}
-            break
-        }}
-    }}
-    close $f
-}}
-explo_dump loops.txt -MERGEABLE
-explo_dump resources.txt -MAP_TO_MODULE
+{dump}
+catch {{explo_dump loops.txt -MERGEABLE}}
+catch {{explo_dump resources.txt -MAP_TO_MODULE}}
 project save
 puts "EXPLO_BASE_OK"
+exit
+"""
+
+DISCOVER_TCL = """\
+# Decouverte seule des chemins des boucles et des memoires, sur le projet de base deja sauve
+project load {{{ccs}}}
+{dump}
+explo_dump loops.txt -MERGEABLE
+explo_dump resources.txt -MAP_TO_MODULE
+puts "EXPLO_DISCOVER_OK"
 exit
 """
 

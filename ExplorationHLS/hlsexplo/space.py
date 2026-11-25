@@ -190,29 +190,34 @@ class Discovery:
 
     @staticmethod
     def _entries(text: str, directive: str) -> list:
+        """Chemins trouvés dans le fichier : tout mot qui commence par / (éventuellement entre accolades Tcl),
+        suffixe /<directive> retiré. Accepte la forme plate (chemin, valeur sur des lignes séparées ou non)."""
         out = []
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            path = line.split("\t")[0].strip()
-            suffix = "/" + directive
-            if path.endswith(suffix):
-                path = path[: -len(suffix)]
-            out.append(path)
+            for path in re.findall(r"\{(/[^}]*)\}|(/\S+)", line):
+                path = (path[0] or path[1]).strip()
+                suffix = "/" + directive
+                if path.endswith(suffix):
+                    path = path[: -len(suffix)]
+                out.append(path)
         return out
 
     @classmethod
     def parse(cls, loops_txt: str, resources_txt: str) -> "Discovery":
+        """Une boucle labellisée s'appelle LABEL (manuel Catapult, « Labels ») ou <fonction>:LABEL selon
+        l'endroit : on prend ce qui suit le dernier « : » du dernier segment, s'il est en MAJUSCULES."""
         d = cls()
         for path in cls._entries(loops_txt, "MERGEABLE"):
             last = path.rsplit("/", 1)[-1]
-            if ":" not in last:
+            inst, _, label = last.rpartition(":")
+            if not re.fullmatch(r"[A-Z][A-Z0-9_]*", label):
                 continue
-            inst, label = last.rsplit(":", 1)
             block = cls._block_of(path, inst)
-            if block and re.fullmatch(r"[A-Z][A-Z_]*", label):
-                d.loops[(block, label)] = path
+            if block:
+                d.loops.setdefault((block, label), path)
         for path in cls._entries(resources_txt, "MAP_TO_MODULE"):
             last = path.rsplit("/", 1)[-1]
             name = last.split(":")[0].split(".")[0]
@@ -222,12 +227,12 @@ class Discovery:
 
     @staticmethod
     def _block_of(path: str, inst: str) -> str | None:
-        m = re.search(r"/(layer[123]|dense)(/|$)", path)
+        m = re.search(r"/(layer[123]|dense)(/|$|:)", path)
         if m:
             return m.group(1)
-        flat = inst.replace(" ", "")
-        for prefix, block in INSTANCE_BLOCK:
-            if flat.startswith(prefix):
+        flat = path.replace(" ", "")
+        for prefix, block in INSTANCE_BLOCK:        # instance n'importe où dans le chemin
+            if prefix in flat:
                 return block
         return None
 

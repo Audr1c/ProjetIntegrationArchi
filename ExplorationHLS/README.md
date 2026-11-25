@@ -29,6 +29,9 @@ make explore-hls ARGS="run"               # la vraie exploration (1 licence Cata
 ```
 
 - Le dépôt doit être cloné dans un chemin **sans espace**.
+- Si `make venv-ecole` a affiché « installation dans ~/.local (pip --user) » (cas constaté le 2026-11-25 :
+  pas de `python3-venv`), effacer le dossier `.venv/` incomplet. `make explore-hls` utilise alors `python3`,
+  qui voit les paquets `--user`. Signe du problème : affichage texte et pas de graphes même sans `--plain`.
 - `--jobs N` lance N synthèses en parallèle. Chacune prend une licence et a son propre projet de base.
 - **Ctrl-C** arrête proprement. Relancer la même commande reprend : les synthèses déjà faites sont en cache.
 - `--plain` donne un affichage texte, une ligne par événement (utile avec `nohup … > explo.txt &`).
@@ -84,8 +87,11 @@ work/w<N>/               projets Catapult (non versionné ; base.log, cand.log e
 L'outil a été testé sous Python 3.8 + pip 21.1.2, avec un faux Catapult et une maquette de l'exécutable
 `catapult`, mais **jamais encore avec le vrai Catapult**. Au premier run, vérifier :
 
-1. la ligne `découverte : N boucles nommées dans 4 blocs`. S'il y a 0 boucle, regarder
-   `work/w0/loops.txt` (la syntaxe de `directive get … -match glob` est peut-être différente en 2024.2) ;
+1. la ligne `découverte : N boucles nommées dans 4 blocs`. S'il n'y a aucune boucle, l'erreur affiche le début de
+   `work/w0/loops.txt` ; le journal est dans `work/w0/discover.log`. Le projet de base est **gardé** : après une
+   correction, relancer refait seulement la découverte (`discover.tcl` : `project load` + `directive get`), pas
+   `go analyze`. Le premier essai (2026-11-25) a trouvé 0 boucle : le parseur exigeait `fonction:LABEL`, alors
+   qu'une boucle labellisée s'appelle souvent juste `LABEL` (manuel Catapult, « Labels ») ; c'est corrigé ;
 2. le statut `! directive refusée` dans le tableau : le détail est dans `runs/<run>/evals/<id>/directives_log.txt`
    (lignes `KO`). Les points les plus incertains sont `-INTERLEAVE` sur une ROM et le double port sur un canal ;
 3. en cas d'échec, la fin du journal Catapult se trouve dans `evals/<id>/catapult_fin.txt`.

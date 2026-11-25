@@ -118,8 +118,9 @@ efficiency: venv ## Efficacité des pas des runs passés (bits gagnés × poids 
 
 # ---------------- HLS (hls/AUDIT_HLS.md) ----------------
 
-# Python du venv s'il existe, sinon python3 (école avec pip --user) ; aucune dépendance obligatoire
-PYHLS = $(if $(wildcard $(PY)),$(PY),$(PYTHON))
+# Python du venv s'il est complet (témoin .installed), sinon python3 (école avec pip --user) : un .venv/ à
+# moitié créé par un « python3 -m venv » raté n'a ni rich ni matplotlib et masquerait les paquets --user
+PYHLS = $(if $(wildcard $(VENV)/.installed),$(PY),$(PYTHON))
 explore-hls: ## Exploration des directives Catapult (ARGS="run", "run --fake", "list", "show", "plot", "tcl")
 	MPLCONFIGDIR="$${MPLCONFIGDIR:-$${TMPDIR:-/tmp}}" $(PYHLS) ExplorationHLS/explore_hls.py $(or $(ARGS),--help)
 
